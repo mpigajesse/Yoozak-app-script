@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+      }
+      .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 100;
+        padding: 48px 0 0;
+        box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+        background-color: #343a40;
+      }
+      .sidebar-sticky {
+        position: relative;
+        top: 0;
+        height: calc(100vh - 48px);
+        padding-top: .5rem;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+      .nav-link {
+        color: #f8f9fa;
+        font-weight: 500;
+        padding: .75rem 1rem;
+      }
+      .nav-link:hover {
+        color: #fff;
+        background-color: rgba(255, 255, 255, .1);
+      }
+      .nav-link.active {
+        color: #fff;
+        background-color: rgba(255, 255, 255, .2);
+      }
+      .nav-link .material-icons {
+        margin-right: 4px;
+        vertical-align: text-bottom;
+      }
+      .main-content {
+        padding-top: 48px;
+      }
+      .navbar-brand {
+        padding-top: .75rem;
+        padding-bottom: .75rem;
+        font-size: 1rem;
+        background-color: rgba(0, 0, 0, .25);
+        box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+      }
+      .table-container {
+        max-height: 500px;
+        overflow-y: auto;
+      }
+      .spinner-border {
+        width: 1rem;
+        height: 1rem;
+      }
+      .badge {
+        font-size: 85%;
+      }
+      .badge-doublon {
+        background-color: #dc3545;
+        color: white;
+      }
+      .badge-ok {
+        background-color: #28a745;
+        color: white;
+      }
+      .badge-verification {
+        background-color: #ffc107;
+        color: black;
+      }
+      .progress {
+        height: 5px;
+      }
+      .btn-file {
+        position: relative;
+        overflow: hidden;
+      }
+      .btn-file input[type=file] {
+        position: absolute;
+        top: 0;
+        right: 0;
+        min-width: 100%;
+        min-height: 100%;
+        font-size: 100px;
+        text-align: right;
+        filter: alpha(opacity=0);
+        opacity: 0;
+        outline: none;
+        background: white;
+        cursor: inherit;
+        display: block;
+      }
+      .source-badge {
+        margin-right: 5px;
+      }
+      .source-Y {
+        background-color: #6f42c1;
+        color: white;
+      }
+      .source-S {
+        background-color: #17a2b8;
+        color: white;
+      }
+      .source-O {
+        background-color: #fd7e14;
+        color: white;
+      }
+      .action-col {
+        width: 130px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+      <a class="navbar-brand col-md-3 col-lg-2 mr-0 px-3" href="#">Yoozak</a>
+      <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-toggle="collapse" data-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <span class="navbar-text w-100 text-center text-light">Système de Gestion des Commandes</span>
+      <ul class="navbar-nav px-3">
+        <li class="nav-item text-nowrap">
+          <span class="nav-link" id="user-email"></span>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
+          <div class="sidebar-sticky pt-3">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link" href="?page=dashboard">
+                  <i class="material-icons">dashboard</i>
+                  Tableau de bord
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link active" href="?page=cmdinit">
+                  <i class="material-icons">shopping_cart</i>
+                  CMDinit (Importation)
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="?page=operateur">
+                  <i class="material-icons">person</i>
+                  Opérateur
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="?page=logistique">
+                  <i class="material-icons">local_shipping</i>
+                  Logistique
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="?page=admin">
+                  <i class="material-icons">settings</i>
+                  Administration
+                </a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4 main-content">
+          <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">CMDinit - Importation et Traitement des Commandes</h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+              <button type="button" class="btn btn-sm btn-outline-secondary mr-2" onclick="refreshData()">
+                <i class="material-icons">refresh</i> Actualiser
+              </button>
+              <div class="btn-group mr-2">
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="validateAll()">
+                  <i class="material-icons">check_circle</i> Tout valider
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-4">
+            <div class="card-header">
+              Importation de données
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <h5>Importer depuis Shopify</h5>
+                  <div class="input-group mb-3">
+                    <div class="custom-file">
+                      <input type="file" class="custom-file-input" id="shopifyFile" accept=".csv">
+                      <label class="custom-file-label" for="shopifyFile">Choisir un fichier CSV...</label>
+                    </div>
+                    <div class="input-group-append">
+                      <button class="btn btn-primary" type="button" onclick="importShopifyData()">Importer</button>
+                    </div>
+                  </div>
+                  <div class="progress mb-3 d-none" id="shopifyProgress">
+                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <h5>Importer depuis Youcan</h5>
+                  <div class="input-group mb-3">
+                    <div class="custom-file">
+                      <input type="file" class="custom-file-input" id="youcanFile" accept=".csv">
+                      <label class="custom-file-label" for="youcanFile">Choisir un fichier CSV...</label>
+                    </div>
+                    <div class="input-group-append">
+                      <button class="btn btn-primary" type="button" onclick="importYoucanData()">Importer</button>
+                    </div>
+                  </div>
+                  <div class="progress mb-3 d-none" id="youcanProgress">
+                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="text-center mt-2">
+                <button class="btn btn-primary" type="button" onclick="processAllData()">
+                  <i class="material-icons">play_arrow</i> Traiter toutes les données
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span>Commandes importées</span>
+              <div>
+                <span class="badge badge-pill badge-primary" id="total-count">0</span>
+                <span class="badge badge-pill badge-success" id="valid-count">0</span>
+                <span class="badge badge-pill badge-danger" id="doublon-count">0</span>
+                <span class="badge badge-pill badge-warning" id="verification-count">0</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="table-container">
+                <table class="table table-sm table-hover" id="commandes-table">
+                  <thead>
+                    <tr>
+                      <th>Source</th>
+                      <th>ID Commande</th>
+                      <th>Client</th>
+                      <th>Téléphone</th>
+                      <th>Adresse</th>
+                      <th>Ville</th>
+                      <th>Produit</th>
+                      <th>Qté</th>
+                      <th>Prix</th>
+                      <th>Date</th>
+                      <th>Statut</th>
+                      <th class="action-col">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="commandes-data">
+                    <tr>
+                      <td colspan="12" class="text-center">Aucune donnée disponible</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal fade" id="validateModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Confirmation</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <p>Êtes-vous sûr de vouloir valider toutes les commandes sans erreur et les envoyer au système?</p>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                  <button type="button" class="btn btn-success" onclick="confirmValidateAll()">Valider</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Afficher l'email de l'utilisateur connecté
+      google.script.run.withSuccessHandler(function(email) {
+        document.getElementById('user-email').textContent = email;
+      }).getActiveUserEmail();
+      
+      // Variables globales
+      let commandesData = [];
+      
+      // Fonction pour actualiser les données
+      function refreshData() {
+        showLoading();
+        google.script.run
+          .withSuccessHandler(updateCommandesTable)
+          .withFailureHandler(handleError)
+          .getImportedCommandes();
+      }
+      
+      // Afficher un message de chargement
+      function showLoading() {
+        document.getElementById('commandes-data').innerHTML = 
+          '<tr><td colspan="12" class="text-center"><div class="spinner-border" role="status"></div> Chargement...</td></tr>';
+      }
+      
+      // Gérer les erreurs
+      function handleError(error) {
+        alert('Une erreur est survenue: ' + error);
+        console.error(error);
+      }
+      
+      // Mettre à jour le tableau des commandes
+      function updateCommandesTable(data) {
+        commandesData = data;
+        const tbody = document.getElementById('commandes-data');
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="12" class="text-center">Aucune donnée disponible</td></tr>';
+          updateCounts(0, 0, 0, 0);
+          return;
+        }
+        
+        let validCount = 0;
+        let doublonCount = 0;
+        let verificationCount = 0;
+        
+        data.forEach(function(commande, index) {
+          const tr = document.createElement('tr');
+          
+          // Déterminer la classe de ligne basée sur le statut
+          if (commande.statut === 'doublon') {
+            tr.className = 'table-danger';
+            doublonCount++;
+          } else if (commande.statut === 'verification') {
+            tr.className = 'table-warning';
+            verificationCount++;
+          } else {
+            validCount++;
+          }
+          
+          tr.innerHTML = `
+            <td><span class="badge source-badge source-${commande.source}">${commande.source}</span></td>
+            <td>${commande.idCommande}</td>
+            <td>${commande.client}</td>
+            <td>${commande.telephone}</td>
+            <td>${commande.adresse}</td>
+            <td>${commande.ville}</td>
+            <td>${commande.produit}</td>
+            <td>${commande.quantite}</td>
+            <td>${commande.prix}</td>
+            <td>${commande.date}</td>
+            <td>
+              ${commande.statut === 'doublon' 
+                ? '<span class="badge badge-doublon">Doublon</span>' 
+                : commande.statut === 'verification' 
+                  ? '<span class="badge badge-verification">À vérifier</span>' 
+                  : '<span class="badge badge-ok">OK</span>'}
+            </td>
+            <td class="action-col">
+              ${commande.statut !== 'doublon' 
+                ? `<button class="btn btn-sm btn-success" onclick="validateCommande(${index})">
+                     <i class="material-icons">check</i>
+                   </button>` 
+                : ''}
+              <button class="btn btn-sm btn-danger" onclick="deleteCommande(${index})">
+                <i class="material-icons">delete</i>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+        
+        updateCounts(data.length, validCount, doublonCount, verificationCount);
+      }
+      
+      // Mettre à jour les compteurs
+      function updateCounts(total, valid, doublon, verification) {
+        document.getElementById('total-count').textContent = total;
+        document.getElementById('valid-count').textContent = valid;
+        document.getElementById('doublon-count').textContent = doublon;
+        document.getElementById('verification-count').textContent = verification;
+      }
+      
+      // Importation de données Shopify
+      function importShopifyData() {
+        const fileInput = document.getElementById('shopifyFile');
+        if (!fileInput.files.length) {
+          alert('Veuillez sélectionner un fichier CSV');
+          return;
+        }
+        
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          const csv = e.target.result;
+          showProgressBar('shopifyProgress');
+          
+          google.script.run
+            .withSuccessHandler(function(result) {
+              hideProgressBar('shopifyProgress');
+              fileInput.value = '';
+              document.querySelector('label[for="shopifyFile"]').textContent = 'Choisir un fichier CSV...';
+              refreshData();
+              alert(result.message);
+            })
+            .withFailureHandler(function(error) {
+              hideProgressBar('shopifyProgress');
+              handleError(error);
+            })
+            .importShopifyCSV(csv);
+        };
+        
+        reader.readAsText(file);
+      }
+      
+      // Importation de données Youcan
+      function importYoucanData() {
+        const fileInput = document.getElementById('youcanFile');
+        if (!fileInput.files.length) {
+          alert('Veuillez sélectionner un fichier CSV');
+          return;
+        }
+        
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          const csv = e.target.result;
+          showProgressBar('youcanProgress');
+          
+          google.script.run
+            .withSuccessHandler(function(result) {
+              hideProgressBar('youcanProgress');
+              fileInput.value = '';
+              document.querySelector('label[for="youcanFile"]').textContent = 'Choisir un fichier CSV...';
+              refreshData();
+              alert(result.message);
+            })
+            .withFailureHandler(function(error) {
+              hideProgressBar('youcanProgress');
+              handleError(error);
+            })
+            .importYoucanCSV(csv);
+        };
+        
+        reader.readAsText(file);
+      }
+      
+      // Afficher la barre de progression
+      function showProgressBar(id) {
+        const progressBar = document.getElementById(id);
+        progressBar.classList.remove('d-none');
+        const bar = progressBar.querySelector('.progress-bar');
+        bar.style.width = '0%';
+        
+        // Simuler la progression
+        let width = 0;
+        const interval = setInterval(function() {
+          if (width >= 90) {
+            clearInterval(interval);
+          } else {
+            width += 5;
+            bar.style.width = width + '%';
+          }
+        }, 200);
+      }
+      
+      // Masquer la barre de progression
+      function hideProgressBar(id) {
+        const progressBar = document.getElementById(id);
+        const bar = progressBar.querySelector('.progress-bar');
+        bar.style.width = '100%';
+        
+        setTimeout(function() {
+          progressBar.classList.add('d-none');
+        }, 500);
+      }
+      
+      // Traiter toutes les données
+      function processAllData() {
+        showLoading();
+        google.script.run
+          .withSuccessHandler(function(result) {
+            refreshData();
+            alert(result.message);
+          })
+          .withFailureHandler(handleError)
+          .processImportedData();
+      }
+      
+      // Valider une commande
+      function validateCommande(index) {
+        const commande = commandesData[index];
+        google.script.run
+          .withSuccessHandler(function(result) {
+            refreshData();
+            alert(result.message);
+          })
+          .withFailureHandler(handleError)
+          .validateCommande(commande.idCommande);
+      }
+      
+      // Supprimer une commande
+      function deleteCommande(index) {
+        if (confirm('Êtes-vous sûr de vouloir supprimer cette commande?')) {
+          const commande = commandesData[index];
+          google.script.run
+            .withSuccessHandler(function(result) {
+              refreshData();
+              alert(result.message);
+            })
+            .withFailureHandler(handleError)
+            .deleteImportedCommande(commande.idCommande);
+        }
+      }
+      
+      // Ouvrir la modal de validation
+      function validateAll() {
+        $('#validateModal').modal('show');
+      }
+      
+      // Confirmer la validation de toutes les commandes
+      function confirmValidateAll() {
+        $('#validateModal').modal('hide');
+        showLoading();
+        
+        google.script.run
+          .withSuccessHandler(function(result) {
+            refreshData();
+            alert(result.message);
+          })
+          .withFailureHandler(handleError)
+          .validateAllCommandes();
+      }
+      
+      // Mise à jour des labels de fichiers
+      document.getElementById('shopifyFile').addEventListener('change', function() {
+        const fileName = this.files[0] ? this.files[0].name : 'Choisir un fichier CSV...';
+        document.querySelector('label[for="shopifyFile"]').textContent = fileName;
+      });
+      
+      document.getElementById('youcanFile').addEventListener('change', function() {
+        const fileName = this.files[0] ? this.files[0].name : 'Choisir un fichier CSV...';
+        document.querySelector('label[for="youcanFile"]').textContent = fileName;
+      });
+      
+      // Charger les données au démarrage
+      document.addEventListener('DOMContentLoaded', refreshData);
+    </script>
+  </body>
+</html>

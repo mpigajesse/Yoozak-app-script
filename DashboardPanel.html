@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+      }
+      .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 100;
+        padding: 48px 0 0;
+        box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+        background-color: #343a40;
+      }
+      .sidebar-sticky {
+        position: relative;
+        top: 0;
+        height: calc(100vh - 48px);
+        padding-top: .5rem;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+      .nav-link {
+        color: #f8f9fa;
+        font-weight: 500;
+        padding: .75rem 1rem;
+      }
+      .nav-link:hover {
+        color: #fff;
+        background-color: rgba(255, 255, 255, .1);
+      }
+      .nav-link.active {
+        color: #fff;
+        background-color: rgba(255, 255, 255, .2);
+      }
+      .nav-link .material-icons {
+        margin-right: 4px;
+        vertical-align: text-bottom;
+      }
+      .main-content {
+        padding-top: 48px;
+      }
+      .card {
+        margin-bottom: 20px;
+        box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+      }
+      .stats-card {
+        text-align: center;
+        padding: 20px;
+      }
+      .stats-card .material-icons {
+        font-size: 48px;
+        margin-bottom: 10px;
+      }
+      .stats-card .stats-number {
+        font-size: 24px;
+        font-weight: bold;
+      }
+      .navbar-brand {
+        padding-top: .75rem;
+        padding-bottom: .75rem;
+        font-size: 1rem;
+        background-color: rgba(0, 0, 0, .25);
+        box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+      <a class="navbar-brand col-md-3 col-lg-2 mr-0 px-3" href="#">Yoozak</a>
+      <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-toggle="collapse" data-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <span class="navbar-text w-100 text-center text-light">Système de Gestion des Commandes</span>
+      <ul class="navbar-nav px-3">
+        <li class="nav-item text-nowrap">
+          <span class="nav-link" id="user-email"></span>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse">
+          <div class="sidebar-sticky pt-3">
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link active" href="?page=dashboard">
+                  <i class="material-icons">dashboard</i>
+                  Tableau de bord
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="?page=cmdinit">
+                  <i class="material-icons">shopping_cart</i>
+                  CMDinit (Importation)
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="?page=operateur">
+                  <i class="material-icons">person</i>
+                  Opérateur
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="?page=logistique">
+                  <i class="material-icons">local_shipping</i>
+                  Logistique
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="?page=admin">
+                  <i class="material-icons">settings</i>
+                  Administration
+                </a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4 main-content">
+          <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Tableau de bord</h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadDashboardData()">
+                <i class="material-icons">refresh</i> Actualiser
+              </button>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-3">
+              <div class="card stats-card">
+                <i class="material-icons text-primary">assignment</i>
+                <div class="stats-number" id="total-commandes">--</div>
+                <div class="stats-label">Commandes totales</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card stats-card">
+                <i class="material-icons text-success">check_circle</i>
+                <div class="stats-number" id="commandes-confirmees">--</div>
+                <div class="stats-label">Commandes confirmées</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card stats-card">
+                <i class="material-icons text-warning">hourglass_empty</i>
+                <div class="stats-number" id="commandes-attente">--</div>
+                <div class="stats-label">En attente</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card stats-card">
+                <i class="material-icons text-danger">error</i>
+                <div class="stats-number" id="commandes-problemes">--</div>
+                <div class="stats-label">Problèmes</div>
+              </div>
+            </div>
+          </div>
+
+          <h2 class="mt-4">Activité récente</h2>
+          <div class="table-responsive">
+            <table class="table table-striped table-sm">
+              <thead>
+                <tr>
+                  <th>Opérateur</th>
+                  <th>N° Commande</th>
+                  <th>Action</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="activite-recente">
+                <tr>
+                  <td colspan="4" class="text-center">Chargement...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Afficher l'email de l'utilisateur connecté
+      google.script.run.withSuccessHandler(function(email) {
+        document.getElementById('user-email').textContent = email;
+      }).getActiveUserEmail();
+      
+      // Charger les données du tableau de bord
+      function loadDashboardData() {
+        google.script.run.withSuccessHandler(updateDashboard).getDashboardData();
+      }
+      
+      // Mettre à jour les statistiques du tableau de bord
+      function updateDashboard(data) {
+        document.getElementById('total-commandes').textContent = data.totalCommandes;
+        document.getElementById('commandes-confirmees').textContent = data.commandesConfirmees;
+        document.getElementById('commandes-attente').textContent = data.commandesAttente;
+        document.getElementById('commandes-problemes').textContent = data.commandesProblemes;
+        
+        // Mettre à jour l'activité récente
+        const tbody = document.getElementById('activite-recente');
+        tbody.innerHTML = '';
+        
+        if (data.activiteRecente.length === 0) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="4" class="text-center">Aucune activité récente</td>';
+          tbody.appendChild(tr);
+        } else {
+          data.activiteRecente.forEach(function(activite) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${activite.operateur}</td>
+              <td>${activite.numeroCommande}</td>
+              <td>${activite.action}</td>
+              <td>${activite.date}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      }
+      
+      // Charger les données au chargement de la page
+      document.addEventListener('DOMContentLoaded', loadDashboardData);
+    </script>
+  </body>
+</html> 

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 10px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input, select, textarea {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .btn {
+        background-color: #4CAF50;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      .btn:hover {
+        background-color: #45a049;
+      }
+      .error {
+        color: red;
+        margin-top: 10px;
+      }
+      .success {
+        color: green;
+        margin-top: 10px;
+      }
+    </style>
+    <script>
+      // Récupérer les listes de produits et régions
+      function onLoad() {
+        google.script.run
+          .withSuccessHandler(remplirProduits)
+          .getProduits();
+          
+        google.script.run
+          .withSuccessHandler(remplirVilles)
+          .getVilles();
+      }
+      
+      // Remplir la liste des produits
+      function remplirProduits(produits) {
+        const select = document.getElementById('produit');
+        produits.forEach(function(produit) {
+          if (produit[0]) { // Vérifier que le produit n'est pas vide
+            const option = document.createElement('option');
+            option.value = produit[0];
+            option.textContent = produit[0] + ' - ' + produit[1] + ' MAD';
+            option.setAttribute('data-prix', produit[1]);
+            select.appendChild(option);
+          }
+        });
+        
+        // Définir le prix initial
+        updatePrix();
+      }
+      
+      // Remplir la liste des villes
+      function remplirVilles(villes) {
+        const select = document.getElementById('ville');
+        villes.forEach(function(ville) {
+          if (ville[0]) { // Vérifier que la ville n'est pas vide
+            const option = document.createElement('option');
+            option.value = ville[0];
+            option.textContent = ville[0] + ' - ' + ville[1];
+            select.appendChild(option);
+          }
+        });
+      }
+      
+      // Mettre à jour le prix en fonction du produit et de la quantité
+      function updatePrix() {
+        const produitSelect = document.getElementById('produit');
+        const selectedOption = produitSelect.options[produitSelect.selectedIndex];
+        
+        if (selectedOption) {
+          const prix = selectedOption.getAttribute('data-prix');
+          const quantite = document.getElementById('quantite').value || 1;
+          const prixTotal = prix * quantite;
+          
+          document.getElementById('prix').value = prixTotal;
+        }
+      }
+      
+      // Soumettre le formulaire
+      function submitForm() {
+        // Désactiver le bouton pour éviter les soumissions multiples
+        document.getElementById('submitBtn').disabled = true;
+        
+        // Récupérer les données du formulaire
+        const formData = {
+          nomClient: document.getElementById('nomClient').value,
+          telephone: document.getElementById('telephone').value,
+          adresse: document.getElementById('adresse').value,
+          ville: document.getElementById('ville').value,
+          produit: document.getElementById('produit').value,
+          quantite: document.getElementById('quantite').value,
+          prix: document.getElementById('prix').value
+        };
+        
+        // Valider les données
+        if (!formData.nomClient || !formData.telephone || !formData.adresse || 
+            !formData.ville || !formData.produit || !formData.quantite || !formData.prix) {
+          showError('Veuillez remplir tous les champs.');
+          document.getElementById('submitBtn').disabled = false;
+          return;
+        }
+        
+        // Envoyer les données au serveur
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onFailure)
+          .creerCommandeSubmit(formData);
+      }
+      
+      // Gestionnaire de succès
+      function onSuccess(result) {
+        if (result.success) {
+          showSuccess(result.message + ' Numéro de commande: ' + result.numeroCommande);
+          // Réinitialiser le formulaire après 2 secondes
+          setTimeout(function() {
+            google.script.host.close();
+          }, 2000);
+        } else {
+          showError(result.message);
+          document.getElementById('submitBtn').disabled = false;
+        }
+      }
+      
+      // Gestionnaire d'échec
+      function onFailure(error) {
+        showError('Erreur: ' + error.message);
+        document.getElementById('submitBtn').disabled = false;
+      }
+      
+      // Afficher un message d'erreur
+      function showError(message) {
+        const errorDiv = document.getElementById('error');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        
+        // Masquer le message de succès s'il est affiché
+        document.getElementById('success').style.display = 'none';
+      }
+      
+      // Afficher un message de succès
+      function showSuccess(message) {
+        const successDiv = document.getElementById('success');
+        successDiv.textContent = message;
+        successDiv.style.display = 'block';
+        
+        // Masquer le message d'erreur s'il est affiché
+        document.getElementById('error').style.display = 'none';
+      }
+    </script>
+  </head>
+  <body onload="onLoad()">
+    <h2>Créer une nouvelle commande</h2>
+    
+    <div class="form-group">
+      <label for="nomClient">Nom du client *</label>
+      <input type="text" id="nomClient" name="nomClient" placeholder="Nom complet du client" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="telephone">Téléphone *</label>
+      <input type="tel" id="telephone" name="telephone" placeholder="Numéro de téléphone" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="adresse">Adresse *</label>
+      <textarea id="adresse" name="adresse" rows="2" placeholder="Adresse de livraison" required></textarea>
+    </div>
+    
+    <div class="form-group">
+      <label for="ville">Ville *</label>
+      <select id="ville" name="ville" required>
+        <option value="">Sélectionnez une ville</option>
+        <!-- Les options seront ajoutées dynamiquement -->
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="produit">Produit *</label>
+      <select id="produit" name="produit" onchange="updatePrix()" required>
+        <option value="">Sélectionnez un produit</option>
+        <!-- Les options seront ajoutées dynamiquement -->
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="quantite">Quantité *</label>
+      <input type="number" id="quantite" name="quantite" min="1" value="1" onchange="updatePrix()" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="prix">Prix total (MAD) *</label>
+      <input type="number" id="prix" name="prix" readonly required>
+    </div>
+    
+    <div class="form-group">
+      <button id="submitBtn" class="btn" onclick="submitForm()">Créer la commande</button>
+    </div>
+    
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="success" class="success" style="display: none;"></div>
+  </body>
+</html>

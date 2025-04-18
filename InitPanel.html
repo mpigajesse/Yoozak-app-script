@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+        padding: 20px;
+      }
+      .setup-container {
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .logo {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo h1 {
+        font-size: 36px;
+        color: #343a40;
+      }
+      .logo span {
+        font-size: 18px;
+        color: #6c757d;
+      }
+      .step {
+        margin-bottom: 30px;
+      }
+      .step-number {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        background-color: #007bff;
+        color: white;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 30px;
+        margin-right: 10px;
+      }
+      .step-title {
+        font-size: 20px;
+        font-weight: bold;
+        display: inline-block;
+      }
+      .step-description {
+        margin-left: 40px;
+        margin-top: 10px;
+      }
+      .action-buttons {
+        text-align: center;
+        margin-top: 30px;
+      }
+      .progress {
+        height: 5px;
+        margin-bottom: 20px;
+      }
+      .result {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 5px;
+        display: none;
+      }
+      .result.success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+      .result.error {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="setup-container">
+      <div class="logo">
+        <h1>Yoozak</h1>
+        <span>Configuration initiale du système</span>
+      </div>
+      
+      <div class="progress">
+        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+      </div>
+      
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-title">Bienvenue dans Yoozak</div>
+        <div class="step-description">
+          <p>Bienvenue dans le système de gestion des commandes Yoozak. Cette page va vous guider à travers la configuration initiale du système.</p>
+          <p>Le système va créer toutes les feuilles et structures nécessaires dans votre Google Sheets.</p>
+        </div>
+      </div>
+      
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-title">Vérification des prérequis</div>
+        <div class="step-description">
+          <p>Avant de commencer, nous allons vérifier que vous avez les autorisations nécessaires pour initialiser le système.</p>
+          <ul>
+            <li id="check-access"><span class="badge badge-secondary">En attente</span> Accès au Google Sheets</li>
+            <li id="check-email"><span class="badge badge-secondary">En attente</span> Email vérifié</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-title">Initialisation du système</div>
+        <div class="step-description">
+          <p>Cette étape va créer toutes les feuilles nécessaires dans votre Google Sheets et configurer le système. Cliquez sur le bouton "Initialiser" pour commencer.</p>
+          <div class="alert alert-warning">
+            <strong>Attention !</strong> Cette opération va réinitialiser toutes les données existantes dans le classeur.
+          </div>
+        </div>
+      </div>
+      
+      <div class="result" id="result"></div>
+      
+      <div class="action-buttons">
+        <button type="button" class="btn btn-primary" id="initButton" onclick="initializeSystem()">Initialiser le système</button>
+        <button type="button" class="btn btn-success d-none" id="continueButton" onclick="redirectToDashboard()">Continuer vers l'application</button>
+      </div>
+    </div>
+    
+    <script>
+      // Afficher l'email de l'utilisateur
+      google.script.run.withSuccessHandler(function(email) {
+        document.getElementById('check-email').innerHTML = 
+          `<span class="badge badge-success">Vérifié</span> Email vérifié: ${email}`;
+        updateProgress(20);
+      }).getActiveUserEmail();
+      
+      // Vérifier l'accès au classeur
+      google.script.run.withSuccessHandler(function(result) {
+        document.getElementById('check-access').innerHTML = 
+          `<span class="badge badge-success">Vérifié</span> Accès au Google Sheets: ${result}`;
+        updateProgress(40);
+      }).checkAccess();
+      
+      // Mettre à jour la barre de progression
+      function updateProgress(value) {
+        document.querySelector('.progress-bar').style.width = value + '%';
+      }
+      
+      // Initialiser le système
+      function initializeSystem() {
+        const initButton = document.getElementById('initButton');
+        initButton.disabled = true;
+        initButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Initialisation en cours...';
+        
+        updateProgress(60);
+        
+        google.script.run
+          .withSuccessHandler(function(result) {
+            updateProgress(100);
+            
+            const resultDiv = document.getElementById('result');
+            if (result) {
+              resultDiv.className = 'result success';
+              resultDiv.innerHTML = '<strong>Succès !</strong> Le système a été initialisé avec succès.';
+              
+              // Afficher le bouton pour continuer
+              document.getElementById('initButton').classList.add('d-none');
+              document.getElementById('continueButton').classList.remove('d-none');
+            } else {
+              resultDiv.className = 'result error';
+              resultDiv.innerHTML = '<strong>Erreur !</strong> Une erreur est survenue lors de l\'initialisation du système.';
+              
+              // Réactiver le bouton d'initialisation
+              initButton.disabled = false;
+              initButton.innerHTML = 'Réessayer';
+            }
+            
+            resultDiv.style.display = 'block';
+          })
+          .withFailureHandler(function(error) {
+            updateProgress(0);
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result error';
+            resultDiv.innerHTML = `<strong>Erreur !</strong> ${error}`;
+            resultDiv.style.display = 'block';
+            
+            // Réactiver le bouton d'initialisation
+            initButton.disabled = false;
+            initButton.innerHTML = 'Réessayer';
+          })
+          .initialiserSysteme(true);
+      }
+      
+      // Rediriger vers le tableau de bord
+      function redirectToDashboard() {
+        window.location.href = '?page=dashboard';
+      }
+    </script>
+  </body>
+</html> 
