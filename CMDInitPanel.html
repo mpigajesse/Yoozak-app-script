@@ -56,68 +56,52 @@
         background-color: rgba(0, 0, 0, .25);
         box-shadow: inset -1px 0 0 rgba(0, 0, 0, .25);
       }
-      .table-container {
-        max-height: 500px;
-        overflow-y: auto;
+      .loading {
+        display: none;
+        text-align: center;
+        margin-top: 20px;
       }
-      .spinner-border {
-        width: 1rem;
-        height: 1rem;
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px;
       }
-      .badge {
-        font-size: 85%;
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
-      .badge-doublon {
-        background-color: #dc3545;
-        color: white;
+      .result {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 4px;
+        display: none;
       }
-      .badge-ok {
-        background-color: #28a745;
-        color: white;
+      .success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
       }
-      .badge-verification {
-        background-color: #ffc107;
-        color: black;
+      .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
       }
-      .progress {
-        height: 5px;
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
       }
-      .btn-file {
-        position: relative;
-        overflow: hidden;
+      th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
       }
-      .btn-file input[type=file] {
-        position: absolute;
-        top: 0;
-        right: 0;
-        min-width: 100%;
-        min-height: 100%;
-        font-size: 100px;
-        text-align: right;
-        filter: alpha(opacity=0);
-        opacity: 0;
-        outline: none;
-        background: white;
-        cursor: inherit;
-        display: block;
-      }
-      .source-badge {
-        margin-right: 5px;
-      }
-      .source-Y {
-        background-color: #6f42c1;
-        color: white;
-      }
-      .source-S {
-        background-color: #17a2b8;
-        color: white;
-      }
-      .source-O {
-        background-color: #fd7e14;
-        color: white;
-      }
-      .action-col {
-        width: 130px;
+      th {
+        background-color: #f2f2f2;
       }
     </style>
   </head>
@@ -141,31 +125,31 @@
           <div class="sidebar-sticky pt-3">
             <ul class="nav flex-column">
               <li class="nav-item">
-                <a class="nav-link" href="?page=dashboard">
+                <a class="nav-link" href="<?= ScriptApp.getService().getUrl() ?>?page=dashboard">
                   <i class="material-icons">dashboard</i>
                   Tableau de bord
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link active" href="?page=cmdinit">
-                  <i class="material-icons">shopping_cart</i>
+                <a class="nav-link active" href="<?= ScriptApp.getService().getUrl() ?>?page=cmdinit">
+                  <i class="material-icons">cloud_download</i>
                   CMDinit (Importation)
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="?page=operateur">
+                <a class="nav-link" href="<?= ScriptApp.getService().getUrl() ?>?page=operateur">
                   <i class="material-icons">person</i>
                   Opérateur
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="?page=logistique">
+                <a class="nav-link" href="<?= ScriptApp.getService().getUrl() ?>?page=logistique">
                   <i class="material-icons">local_shipping</i>
                   Logistique
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="?page=admin">
+                <a class="nav-link" href="<?= ScriptApp.getService().getUrl() ?>?page=admin">
                   <i class="material-icons">settings</i>
                   Administration
                 </a>
@@ -176,120 +160,100 @@
 
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4 main-content">
           <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-            <h1 class="h2">CMDinit - Importation et Traitement des Commandes</h1>
+            <h1 class="h2">Importation des données</h1>
             <div class="btn-toolbar mb-2 mb-md-0">
-              <button type="button" class="btn btn-sm btn-outline-secondary mr-2" onclick="refreshData()">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="recupererListeFeuilles()">
                 <i class="material-icons">refresh</i> Actualiser
               </button>
-              <div class="btn-group mr-2">
-                <button type="button" class="btn btn-sm btn-outline-success" onclick="validateAll()">
-                  <i class="material-icons">check_circle</i> Tout valider
-                </button>
-              </div>
             </div>
           </div>
 
+          <!-- Section 1: Afficher les feuilles disponibles -->
           <div class="card mb-4">
             <div class="card-header">
-              Importation de données
+              <h5 class="mb-0">1. Afficher les feuilles disponibles</h5>
             </div>
             <div class="card-body">
-              <div class="row">
-                <div class="col-md-6">
-                  <h5>Importer depuis Shopify</h5>
-                  <div class="input-group mb-3">
-                    <div class="custom-file">
-                      <input type="file" class="custom-file-input" id="shopifyFile" accept=".csv">
-                      <label class="custom-file-label" for="shopifyFile">Choisir un fichier CSV...</label>
-                    </div>
-                    <div class="input-group-append">
-                      <button class="btn btn-primary" type="button" onclick="importShopifyData()">Importer</button>
-                    </div>
-                  </div>
-                  <div class="progress mb-3 d-none" id="shopifyProgress">
-                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <h5>Importer depuis Youcan</h5>
-                  <div class="input-group mb-3">
-                    <div class="custom-file">
-                      <input type="file" class="custom-file-input" id="youcanFile" accept=".csv">
-                      <label class="custom-file-label" for="youcanFile">Choisir un fichier CSV...</label>
-                    </div>
-                    <div class="input-group-append">
-                      <button class="btn btn-primary" type="button" onclick="importYoucanData()">Importer</button>
-                    </div>
-                  </div>
-                  <div class="progress mb-3 d-none" id="youcanProgress">
-                    <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                  </div>
-                </div>
+              <p>Cliquez sur le bouton ci-dessous pour récupérer la liste des feuilles disponibles dans le fichier Google Sheets.</p>
+              <button id="btnListeFeuilles" class="btn btn-primary" onclick="recupererListeFeuilles()">
+                <i class="material-icons align-middle">list</i> Récupérer la liste des feuilles
+              </button>
+              
+              <div id="resultListeFeuilles" class="result"></div>
+              
+              <div id="loadingFeuilles" class="loading">
+                <div class="spinner"></div>
+                <p>Chargement en cours...</p>
               </div>
-              <div class="text-center mt-2">
-                <button class="btn btn-primary" type="button" onclick="processAllData()">
-                  <i class="material-icons">play_arrow</i> Traiter toutes les données
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <span>Commandes importées</span>
-              <div>
-                <span class="badge badge-pill badge-primary" id="total-count">0</span>
-                <span class="badge badge-pill badge-success" id="valid-count">0</span>
-                <span class="badge badge-pill badge-danger" id="doublon-count">0</span>
-                <span class="badge badge-pill badge-warning" id="verification-count">0</span>
-              </div>
-            </div>
-            <div class="card-body">
-              <div class="table-container">
-                <table class="table table-sm table-hover" id="commandes-table">
-                  <thead>
+              
+              <div id="tableauFeuilles" style="display: none; margin-top: 20px;">
+                <h6>Feuilles disponibles :</h6>
+                <table class="table table-bordered table-striped">
+                  <thead class="thead-light">
                     <tr>
-                      <th>Source</th>
-                      <th>ID Commande</th>
-                      <th>Client</th>
-                      <th>Téléphone</th>
-                      <th>Adresse</th>
-                      <th>Ville</th>
-                      <th>Produit</th>
-                      <th>Qté</th>
-                      <th>Prix</th>
-                      <th>Date</th>
-                      <th>Statut</th>
-                      <th class="action-col">Actions</th>
+                      <th>Nom de la feuille</th>
                     </tr>
                   </thead>
-                  <tbody id="commandes-data">
-                    <tr>
-                      <td colspan="12" class="text-center">Aucune donnée disponible</td>
-                    </tr>
-                  </tbody>
+                  <tbody></tbody>
                 </table>
               </div>
             </div>
           </div>
 
-          <div class="modal fade" id="validateModal" tabindex="-1" role="dialog">
-            <div class="modal-dialog" role="document">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title">Confirmation</h5>
-                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                  </button>
-                </div>
-                <div class="modal-body">
-                  <p>Êtes-vous sûr de vouloir valider toutes les commandes sans erreur et les envoyer au système?</p>
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
-                  <button type="button" class="btn btn-success" onclick="confirmValidateAll()">Valider</button>
-                </div>
+          <!-- Section 2: Importer une feuille spécifique -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">2. Importer une feuille spécifique</h5>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label for="selectFeuille">Sélectionnez une feuille à importer :</label>
+                <select id="selectFeuille" class="form-control">
+                  <option value="">-- Veuillez d'abord récupérer la liste des feuilles --</option>
+                </select>
               </div>
+              
+              <div class="form-group">
+                <label for="inputFeuilleDestination">Nom de la feuille de destination :</label>
+                <input type="text" id="inputFeuilleDestination" class="form-control" placeholder="Nom de la feuille dans le fichier actif">
+              </div>
+              
+              <button id="btnImporter" class="btn btn-success" onclick="importerFeuille()" disabled>
+                <i class="material-icons align-middle">file_download</i> Importer les données
+              </button>
+              
+              <div id="resultImport" class="result"></div>
+              
+              <div id="loadingImport" class="loading">
+                <div class="spinner"></div>
+                <p>Importation en cours...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Afficher un aperçu des données -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">3. Afficher un aperçu des données</h5>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label for="selectFeuilleApercu">Sélectionnez une feuille pour voir un aperçu :</label>
+                <select id="selectFeuilleApercu" class="form-control">
+                  <option value="">-- Veuillez d'abord récupérer la liste des feuilles --</option>
+                </select>
+              </div>
+              
+              <button id="btnApercuSimple" class="btn btn-info" onclick="afficherApercuSimple()" disabled>
+                <i class="material-icons align-middle">visibility</i> Afficher l'aperçu
+              </button>
+              
+              <div id="loadingApercuSimple" class="loading">
+                <div class="spinner"></div>
+                <p>Chargement de l'aperçu...</p>
+              </div>
+              
+              <div id="contenuApercuSimple" class="mt-3"></div>
             </div>
           </div>
         </main>
@@ -303,270 +267,178 @@
       google.script.run.withSuccessHandler(function(email) {
         document.getElementById('user-email').textContent = email;
       }).getActiveUserEmail();
-      
-      // Variables globales
-      let commandesData = [];
-      
-      // Fonction pour actualiser les données
-      function refreshData() {
-        showLoading();
-        google.script.run
-          .withSuccessHandler(updateCommandesTable)
-          .withFailureHandler(handleError)
-          .getImportedCommandes();
-      }
-      
-      // Afficher un message de chargement
-      function showLoading() {
-        document.getElementById('commandes-data').innerHTML = 
-          '<tr><td colspan="12" class="text-center"><div class="spinner-border" role="status"></div> Chargement...</td></tr>';
-      }
-      
-      // Gérer les erreurs
-      function handleError(error) {
-        alert('Une erreur est survenue: ' + error);
-        console.error(error);
-      }
-      
-      // Mettre à jour le tableau des commandes
-      function updateCommandesTable(data) {
-        commandesData = data;
-        const tbody = document.getElementById('commandes-data');
-        tbody.innerHTML = '';
+
+      // Fonction pour récupérer la liste des feuilles
+      function recupererListeFeuilles() {
+        // Afficher le chargement
+        document.getElementById('loadingFeuilles').style.display = 'block';
+        document.getElementById('resultListeFeuilles').style.display = 'none';
+        document.getElementById('tableauFeuilles').style.display = 'none';
         
-        if (data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="12" class="text-center">Aucune donnée disponible</td></tr>';
-          updateCounts(0, 0, 0, 0);
+        // Appeler la fonction du serveur
+        google.script.run
+          .withSuccessHandler(afficherListeFeuilles)
+          .withFailureHandler(afficherErreurFeuilles)
+          .getListeFeuilles();
+      }
+      
+      // Fonction pour afficher la liste des feuilles
+      function afficherListeFeuilles(resultat) {
+        // Masquer le chargement
+        document.getElementById('loadingFeuilles').style.display = 'none';
+        
+        if (resultat.success) {
+          // Afficher les feuilles dans le tableau
+          var tbody = document.querySelector('#tableauFeuilles tbody');
+          tbody.innerHTML = ''; // Effacer le contenu précédent
+          
+          resultat.nomsFeuilles.forEach(function(nom) {
+            var tr = document.createElement('tr');
+            var td = document.createElement('td');
+            td.textContent = nom;
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+          });
+          
+          document.getElementById('tableauFeuilles').style.display = 'block';
+          
+          // Mettre à jour les listes déroulantes
+          var selectFeuille = document.getElementById('selectFeuille');
+          var selectFeuilleApercu = document.getElementById('selectFeuilleApercu');
+          
+          // Effacer les options précédentes
+          selectFeuille.innerHTML = '';
+          selectFeuilleApercu.innerHTML = '';
+          
+          // Ajouter l'option par défaut
+          var defaultOption = document.createElement('option');
+          defaultOption.value = '';
+          defaultOption.textContent = '-- Sélectionnez une feuille --';
+          selectFeuille.appendChild(defaultOption.cloneNode(true));
+          selectFeuilleApercu.appendChild(defaultOption);
+          
+          // Ajouter les options pour chaque feuille
+          resultat.nomsFeuilles.forEach(function(nom) {
+            var option = document.createElement('option');
+            option.value = nom;
+            option.textContent = nom;
+            
+            selectFeuille.appendChild(option.cloneNode(true));
+            selectFeuilleApercu.appendChild(option);
+          });
+          
+          // Activer les boutons
+          document.getElementById('btnImporter').disabled = false;
+          document.getElementById('btnApercuSimple').disabled = false;
+          
+          // Afficher un message de succès
+          var result = document.getElementById('resultListeFeuilles');
+          result.className = 'result success alert alert-success';
+          result.textContent = resultat.nomsFeuilles.length + ' feuilles ont été récupérées avec succès.';
+          result.style.display = 'block';
+        } else {
+          afficherErreurFeuilles(resultat.message);
+        }
+      }
+      
+      // Fonction pour afficher une erreur lors de la récupération des feuilles
+      function afficherErreurFeuilles(erreur) {
+        document.getElementById('loadingFeuilles').style.display = 'none';
+        
+        var result = document.getElementById('resultListeFeuilles');
+        result.className = 'result error alert alert-danger';
+        result.textContent = 'Erreur : ' + erreur;
+        result.style.display = 'block';
+      }
+      
+      // Fonction pour importer une feuille
+      function importerFeuille() {
+        var nomFeuille = document.getElementById('selectFeuille').value;
+        var feuilleDestination = document.getElementById('inputFeuilleDestination').value;
+        
+        if (!nomFeuille) {
+          alert('Veuillez sélectionner une feuille à importer.');
           return;
         }
         
-        let validCount = 0;
-        let doublonCount = 0;
-        let verificationCount = 0;
-        
-        data.forEach(function(commande, index) {
-          const tr = document.createElement('tr');
-          
-          // Déterminer la classe de ligne basée sur le statut
-          if (commande.statut === 'doublon') {
-            tr.className = 'table-danger';
-            doublonCount++;
-          } else if (commande.statut === 'verification') {
-            tr.className = 'table-warning';
-            verificationCount++;
-          } else {
-            validCount++;
-          }
-          
-          tr.innerHTML = `
-            <td><span class="badge source-badge source-${commande.source}">${commande.source}</span></td>
-            <td>${commande.idCommande}</td>
-            <td>${commande.client}</td>
-            <td>${commande.telephone}</td>
-            <td>${commande.adresse}</td>
-            <td>${commande.ville}</td>
-            <td>${commande.produit}</td>
-            <td>${commande.quantite}</td>
-            <td>${commande.prix}</td>
-            <td>${commande.date}</td>
-            <td>
-              ${commande.statut === 'doublon' 
-                ? '<span class="badge badge-doublon">Doublon</span>' 
-                : commande.statut === 'verification' 
-                  ? '<span class="badge badge-verification">À vérifier</span>' 
-                  : '<span class="badge badge-ok">OK</span>'}
-            </td>
-            <td class="action-col">
-              ${commande.statut !== 'doublon' 
-                ? `<button class="btn btn-sm btn-success" onclick="validateCommande(${index})">
-                     <i class="material-icons">check</i>
-                   </button>` 
-                : ''}
-              <button class="btn btn-sm btn-danger" onclick="deleteCommande(${index})">
-                <i class="material-icons">delete</i>
-              </button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-        
-        updateCounts(data.length, validCount, doublonCount, verificationCount);
-      }
-      
-      // Mettre à jour les compteurs
-      function updateCounts(total, valid, doublon, verification) {
-        document.getElementById('total-count').textContent = total;
-        document.getElementById('valid-count').textContent = valid;
-        document.getElementById('doublon-count').textContent = doublon;
-        document.getElementById('verification-count').textContent = verification;
-      }
-      
-      // Importation de données Shopify
-      function importShopifyData() {
-        const fileInput = document.getElementById('shopifyFile');
-        if (!fileInput.files.length) {
-          alert('Veuillez sélectionner un fichier CSV');
+        if (!feuilleDestination) {
+          alert('Veuillez saisir un nom pour la feuille de destination.');
           return;
         }
         
-        const file = fileInput.files[0];
-        const reader = new FileReader();
+        // Afficher le chargement
+        document.getElementById('loadingImport').style.display = 'block';
+        document.getElementById('resultImport').style.display = 'none';
         
-        reader.onload = function(e) {
-          const csv = e.target.result;
-          showProgressBar('shopifyProgress');
-          
-          google.script.run
-            .withSuccessHandler(function(result) {
-              hideProgressBar('shopifyProgress');
-              fileInput.value = '';
-              document.querySelector('label[for="shopifyFile"]').textContent = 'Choisir un fichier CSV...';
-              refreshData();
-              alert(result.message);
-            })
-            .withFailureHandler(function(error) {
-              hideProgressBar('shopifyProgress');
-              handleError(error);
-            })
-            .importShopifyCSV(csv);
-        };
-        
-        reader.readAsText(file);
+        // Appeler la fonction du serveur
+        google.script.run
+          .withSuccessHandler(afficherResultatImport)
+          .withFailureHandler(afficherErreurImport)
+          .importerDonnees(nomFeuille, feuilleDestination);
       }
       
-      // Importation de données Youcan
-      function importYoucanData() {
-        const fileInput = document.getElementById('youcanFile');
-        if (!fileInput.files.length) {
-          alert('Veuillez sélectionner un fichier CSV');
+      // Fonction pour afficher le résultat de l'importation
+      function afficherResultatImport(resultat) {
+        // Masquer le chargement
+        document.getElementById('loadingImport').style.display = 'none';
+        
+        var result = document.getElementById('resultImport');
+        
+        if (resultat.success) {
+          result.className = 'result success alert alert-success';
+          result.innerHTML = '<strong>Succès :</strong> ' + resultat.message + '<br>' +
+                          '<strong>Nombre de lignes :</strong> ' + resultat.nbLignes + '<br>' +
+                          '<strong>Nombre de colonnes :</strong> ' + resultat.nbColonnes;
+        } else {
+          result.className = 'result error alert alert-danger';
+          result.textContent = 'Erreur : ' + resultat.message;
+        }
+        
+        result.style.display = 'block';
+      }
+      
+      // Fonction pour afficher une erreur lors de l'importation
+      function afficherErreurImport(erreur) {
+        document.getElementById('loadingImport').style.display = 'none';
+        
+        var result = document.getElementById('resultImport');
+        result.className = 'result error alert alert-danger';
+        result.textContent = 'Erreur : ' + erreur;
+        result.style.display = 'block';
+      }
+      
+      // Fonction pour afficher un aperçu des données
+      function afficherApercuSimple() {
+        var nomFeuille = document.getElementById('selectFeuilleApercu').value;
+        
+        if (!nomFeuille) {
+          alert('Veuillez sélectionner une feuille pour afficher l\'aperçu.');
           return;
         }
         
-        const file = fileInput.files[0];
-        const reader = new FileReader();
+        // Afficher le chargement
+        document.getElementById('loadingApercuSimple').style.display = 'block';
+        document.getElementById('contenuApercuSimple').innerHTML = '';
         
-        reader.onload = function(e) {
-          const csv = e.target.result;
-          showProgressBar('youcanProgress');
-          
-          google.script.run
-            .withSuccessHandler(function(result) {
-              hideProgressBar('youcanProgress');
-              fileInput.value = '';
-              document.querySelector('label[for="youcanFile"]').textContent = 'Choisir un fichier CSV...';
-              refreshData();
-              alert(result.message);
-            })
-            .withFailureHandler(function(error) {
-              hideProgressBar('youcanProgress');
-              handleError(error);
-            })
-            .importYoucanCSV(csv);
-        };
-        
-        reader.readAsText(file);
-      }
-      
-      // Afficher la barre de progression
-      function showProgressBar(id) {
-        const progressBar = document.getElementById(id);
-        progressBar.classList.remove('d-none');
-        const bar = progressBar.querySelector('.progress-bar');
-        bar.style.width = '0%';
-        
-        // Simuler la progression
-        let width = 0;
-        const interval = setInterval(function() {
-          if (width >= 90) {
-            clearInterval(interval);
-          } else {
-            width += 5;
-            bar.style.width = width + '%';
-          }
-        }, 200);
-      }
-      
-      // Masquer la barre de progression
-      function hideProgressBar(id) {
-        const progressBar = document.getElementById(id);
-        const bar = progressBar.querySelector('.progress-bar');
-        bar.style.width = '100%';
-        
-        setTimeout(function() {
-          progressBar.classList.add('d-none');
-        }, 500);
-      }
-      
-      // Traiter toutes les données
-      function processAllData() {
-        showLoading();
+        // Appeler la nouvelle fonction du serveur qui retourne directement du HTML
         google.script.run
-          .withSuccessHandler(function(result) {
-            refreshData();
-            alert(result.message);
+          .withSuccessHandler(function(htmlContent) {
+            // Masquer le chargement
+            document.getElementById('loadingApercuSimple').style.display = 'none';
+            
+            // Afficher le contenu HTML retourné directement
+            document.getElementById('contenuApercuSimple').innerHTML = htmlContent;
           })
-          .withFailureHandler(handleError)
-          .processImportedData();
-      }
-      
-      // Valider une commande
-      function validateCommande(index) {
-        const commande = commandesData[index];
-        google.script.run
-          .withSuccessHandler(function(result) {
-            refreshData();
-            alert(result.message);
+          .withFailureHandler(function(error) {
+            // Masquer le chargement
+            document.getElementById('loadingApercuSimple').style.display = 'none';
+            
+            // Afficher l'erreur
+            document.getElementById('contenuApercuSimple').innerHTML = 
+              '<div class="alert alert-danger">Erreur : ' + error + '</div>';
           })
-          .withFailureHandler(handleError)
-          .validateCommande(commande.idCommande);
+          .getApercuHTML(nomFeuille);
       }
-      
-      // Supprimer une commande
-      function deleteCommande(index) {
-        if (confirm('Êtes-vous sûr de vouloir supprimer cette commande?')) {
-          const commande = commandesData[index];
-          google.script.run
-            .withSuccessHandler(function(result) {
-              refreshData();
-              alert(result.message);
-            })
-            .withFailureHandler(handleError)
-            .deleteImportedCommande(commande.idCommande);
-        }
-      }
-      
-      // Ouvrir la modal de validation
-      function validateAll() {
-        $('#validateModal').modal('show');
-      }
-      
-      // Confirmer la validation de toutes les commandes
-      function confirmValidateAll() {
-        $('#validateModal').modal('hide');
-        showLoading();
-        
-        google.script.run
-          .withSuccessHandler(function(result) {
-            refreshData();
-            alert(result.message);
-          })
-          .withFailureHandler(handleError)
-          .validateAllCommandes();
-      }
-      
-      // Mise à jour des labels de fichiers
-      document.getElementById('shopifyFile').addEventListener('change', function() {
-        const fileName = this.files[0] ? this.files[0].name : 'Choisir un fichier CSV...';
-        document.querySelector('label[for="shopifyFile"]').textContent = fileName;
-      });
-      
-      document.getElementById('youcanFile').addEventListener('change', function() {
-        const fileName = this.files[0] ? this.files[0].name : 'Choisir un fichier CSV...';
-        document.querySelector('label[for="youcanFile"]').textContent = fileName;
-      });
-      
-      // Charger les données au démarrage
-      document.addEventListener('DOMContentLoaded', refreshData);
     </script>
   </body>
 </html>

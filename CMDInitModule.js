@@ -1,687 +1,266 @@
 /**
- * Yoozak - Module CMDInit
+ * Yoozak - Module d'initialisation des commandes
  * 
- * Ce script contient les fonctions pour l'importation et le traitement initial des commandes
+ * Ce script contient les fonctions pour récupérer les données depuis Google Sheets
  * Version: 1.0
- * Date: 17/04/2025
+ * Date: 2023
  */
 
 /**
- * Récupère et retourne l'email de l'utilisateur actif
- * Utilisé par l'interface web
+ * Fonction pour journaliser les erreurs
+ * Remplace la fonction globale si elle n'est pas disponible
+ * 
+ * @param {Error} error L'erreur à journaliser
+ * @param {string} source La source de l'erreur
  */
-function getActiveUserEmail() {
-    return Session.getActiveUser().getEmail();
-  }
-  
-  /**
-   * Récupère les données du tableau de bord pour l'interface web
-   */
-  function getDashboardData() {
-    const ss = getSpreadsheet();
-    const sheetInitiale = ss.getSheetByName(CONFIG.SHEETS.INITIALE);
-    const sheetConfirme = ss.getSheetByName(CONFIG.SHEETS.CONFIRME);
-    const sheetProblem = ss.getSheetByName(CONFIG.SHEETS.PROBLEM);
-    const sheetLog = ss.getSheetByName(CONFIG.SHEETS.TMP_LOG);
-    
-    // Nombre total de commandes
-    const totalCommandes = sheetInitiale ? sheetInitiale.getLastRow() - 1 : 0;
-    
-    // Nombre de commandes confirmées
-    const commandesConfirmees = sheetConfirme ? sheetConfirme.getLastRow() - 1 : 0;
-    
-    // Nombre de commandes en attente
-    const commandesAttente = totalCommandes;
-    
-    // Nombre de commandes avec problèmes
-    const commandesProblemes = sheetProblem ? sheetProblem.getLastRow() - 1 : 0;
-    
-    // Activité récente
-    let activiteRecente = [];
-    if (sheetLog && sheetLog.getLastRow() > 1) {
-      const logData = sheetLog.getRange(2, 1, Math.min(10, sheetLog.getLastRow() - 1), 5).getValues();
-      logData.forEach(function(row) {
-        activiteRecente.push({
-          operateur: row[0],
-          numeroCommande: row[1],
-          action: row[2],
-          date: row[4]
-        });
-      });
+function logError(error, source) {
+  try {
+    // Si la fonction globale existe, l'utiliser
+    if (typeof this.logError === 'function' && this !== window) {
+      this.logError(error, source);
+      return;
     }
     
-    return {
-      totalCommandes: totalCommandes,
-      commandesConfirmees: commandesConfirmees,
-      commandesAttente: commandesAttente,
-      commandesProblemes: commandesProblemes,
-      activiteRecente: activiteRecente
-    };
-  }
-  
-  /**
-   * Importe les données CSV de Shopify
-   * 
-   * @param {string} csvContent Le contenu du fichier CSV
-   * @return {Object} Résultat de l'importation
-   */
-  function importShopifyCSV(csvContent) {
-    // Créer une feuille temporaire pour l'importation
-    const ss = getSpreadsheet();
-    let tempSheet = ss.getSheetByName('TempImport');
+    // Sinon, journaliser dans la console
+    console.error(`[${source}] ${error.toString()}`);
     
-    if (tempSheet) {
-      ss.deleteSheet(tempSheet);
-    }
-    
-    tempSheet = ss.insertSheet('TempImport');
-    
-    // Convertir le CSV en données tabulaires
-    const csvData = Utilities.parseCsv(csvContent);
-    
-    // Si le CSV est vide, retourner une erreur
-    if (csvData.length <= 1) {
-      ss.deleteSheet(tempSheet);
-      return { success: false, message: 'Le fichier CSV est vide ou mal formaté.' };
-    }
-    
-    // Écrire les données dans la feuille temporaire
-    tempSheet.getRange(1, 1, csvData.length, csvData[0].length).setValues(csvData);
-    
-    // Traiter les données selon le format Shopify
-    const shopifyData = [];
-    
-    // Récupérer les indices des colonnes pertinentes (à adapter selon le format CSV de Shopify)
-    const orderIdCol = findColumnIndex(csvData[0], 'Name', 'Order ID', 'Order Number');
-    const customerNameCol = findColumnIndex(csvData[0], 'Shipping Name', 'Customer Name', 'Billing Name');
-    const phoneCol = findColumnIndex(csvData[0], 'Phone', 'Shipping Phone', 'Billing Phone');
-    const addressCol = findColumnIndex(csvData[0], 'Shipping Address', 'Shipping Address1', 'Address');
-    const cityCol = findColumnIndex(csvData[0], 'Shipping City', 'City', 'Billing City');
-    const productCol = findColumnIndex(csvData[0], 'Lineitem name', 'Product Name', 'Item Name');
-    const quantityCol = findColumnIndex(csvData[0], 'Lineitem quantity', 'Quantity', 'Item Quantity');
-    const priceCol = findColumnIndex(csvData[0], 'Subtotal', 'Total', 'Price');
-    const dateCol = findColumnIndex(csvData[0], 'Created at', 'Order Date', 'Date');
-    
-    // Vérifier que toutes les colonnes nécessaires sont présentes
-    if (orderIdCol < 0 || customerNameCol < 0 || productCol < 0) {
-      ss.deleteSheet(tempSheet);
-      return { success: false, message: 'Format CSV non reconnu. Colonnes manquantes.' };
-    }
-    
-    // Parcourir les données (en sautant l'en-tête)
-    for (let i = 1; i < csvData.length; i++) {
-      const row = csvData[i];
-      
-      // Vérifier que les données minimales sont présentes
-      if (!row[orderIdCol] || !row[customerNameCol]) {
-        continue;
-      }
-      
-      shopifyData.push({
-        idCommande: 'S-' + row[orderIdCol],
-        client: row[customerNameCol] || '',
-        telephone: row[phoneCol] || '',
-        adresse: row[addressCol] || '',
-        ville: row[cityCol] || '',
-        produit: row[productCol] || '',
-        quantite: row[quantityCol] || '1',
-        prix: row[priceCol] || '0',
-        date: row[dateCol] || new Date().toISOString(),
-        source: 'S'
-      });
-    }
-    
-    // Supprimer la feuille temporaire
-    ss.deleteSheet(tempSheet);
-    
-    // Enregistrer les données dans la feuille d'importation Shopify
-    saveImportedData(shopifyData, 'Shopify');
-    
-    return { 
-      success: true, 
-      message: `${shopifyData.length} commandes importées depuis Shopify.`,
-      count: shopifyData.length
-    };
-  }
-  
-  /**
-   * Importe les données CSV de Youcan
-   * 
-   * @param {string} csvContent Le contenu du fichier CSV
-   * @return {Object} Résultat de l'importation
-   */
-  function importYoucanCSV(csvContent) {
-    // Créer une feuille temporaire pour l'importation
-    const ss = getSpreadsheet();
-    let tempSheet = ss.getSheetByName('TempImport');
-    
-    if (tempSheet) {
-      ss.deleteSheet(tempSheet);
-    }
-    
-    tempSheet = ss.insertSheet('TempImport');
-    
-    // Convertir le CSV en données tabulaires
-    const csvData = Utilities.parseCsv(csvContent);
-    
-    // Si le CSV est vide, retourner une erreur
-    if (csvData.length <= 1) {
-      ss.deleteSheet(tempSheet);
-      return { success: false, message: 'Le fichier CSV est vide ou mal formaté.' };
-    }
-    
-    // Écrire les données dans la feuille temporaire
-    tempSheet.getRange(1, 1, csvData.length, csvData[0].length).setValues(csvData);
-    
-    // Traiter les données selon le format Youcan
-    const youcanData = [];
-    
-    // Récupérer les indices des colonnes pertinentes (à adapter selon le format CSV de Youcan)
-    const orderIdCol = findColumnIndex(csvData[0], 'Order ID', 'ID', 'Order Number');
-    const customerNameCol = findColumnIndex(csvData[0], 'Customer Name', 'Client', 'Full Name');
-    const phoneCol = findColumnIndex(csvData[0], 'Phone', 'Téléphone', 'Contact');
-    const addressCol = findColumnIndex(csvData[0], 'Shipping Address', 'Adresse', 'Address');
-    const cityCol = findColumnIndex(csvData[0], 'City', 'Ville', 'Shipping City');
-    const productCol = findColumnIndex(csvData[0], 'Product Name', 'Produit', 'Item');
-    const quantityCol = findColumnIndex(csvData[0], 'Quantity', 'Quantité', 'Item Quantity');
-    const priceCol = findColumnIndex(csvData[0], 'Total', 'Prix', 'Amount');
-    const dateCol = findColumnIndex(csvData[0], 'Created At', 'Date', 'Order Date');
-    
-    // Vérifier que toutes les colonnes nécessaires sont présentes
-    if (orderIdCol < 0 || customerNameCol < 0 || productCol < 0) {
-      ss.deleteSheet(tempSheet);
-      return { success: false, message: 'Format CSV non reconnu. Colonnes manquantes.' };
-    }
-    
-    // Parcourir les données (en sautant l'en-tête)
-    for (let i = 1; i < csvData.length; i++) {
-      const row = csvData[i];
-      
-      // Vérifier que les données minimales sont présentes
-      if (!row[orderIdCol] || !row[customerNameCol]) {
-        continue;
-      }
-      
-      youcanData.push({
-        idCommande: 'Y-' + row[orderIdCol],
-        client: row[customerNameCol] || '',
-        telephone: row[phoneCol] || '',
-        adresse: row[addressCol] || '',
-        ville: row[cityCol] || '',
-        produit: row[productCol] || '',
-        quantite: row[quantityCol] || '1',
-        prix: row[priceCol] || '0',
-        date: row[dateCol] || new Date().toISOString(),
-        source: 'Y'
-      });
-    }
-    
-    // Supprimer la feuille temporaire
-    ss.deleteSheet(tempSheet);
-    
-    // Enregistrer les données dans la feuille d'importation Youcan
-    saveImportedData(youcanData, 'Youcan');
-    
-    return { 
-      success: true, 
-      message: `${youcanData.length} commandes importées depuis Youcan.`,
-      count: youcanData.length
-    };
-  }
-  
-  /**
-   * Enregistre les données importées dans la feuille appropriée
-   * 
-   * @param {Array} data Les données à enregistrer
-   * @param {string} source La source des données (Shopify ou Youcan)
-   */
-  function saveImportedData(data, source) {
-    const ss = getSpreadsheet();
-    let sheetName = 'Import ' + source;
-    let sheet = ss.getSheetByName(sheetName);
-    
-    // Créer la feuille si elle n'existe pas
-    if (!sheet) {
-      sheet = ss.insertSheet(sheetName);
-      sheet.appendRow([
-        'ID Commande', 'Client', 'Téléphone', 'Adresse', 'Ville', 
-        'Produit', 'Quantité', 'Prix', 'Date', 'Source'
-      ]);
-    } else {
-      // Effacer les données existantes (sauf l'en-tête)
-      if (sheet.getLastRow() > 1) {
-        sheet.deleteRows(2, sheet.getLastRow() - 1);
-      }
-    }
-    
-    // Ajouter les nouvelles données
-    if (data.length > 0) {
-      const rowsToAdd = data.map(function(item) {
-        return [
-          item.idCommande,
-          item.client,
-          item.telephone,
-          item.adresse,
-          item.ville,
-          item.produit,
-          item.quantite,
-          item.prix,
-          item.date,
-          item.source
-        ];
-      });
-      
-      sheet.getRange(2, 1, rowsToAdd.length, 10).setValues(rowsToAdd);
-    }
-  }
-  
-  /**
-   * Trouve l'index d'une colonne dans un tableau d'en-têtes
-   * 
-   * @param {Array} headers Le tableau d'en-têtes
-   * @param {...string} possibleNames Les noms possibles de la colonne
-   * @return {number} L'index de la colonne trouvée ou -1 si non trouvée
-   */
-  function findColumnIndex(headers, ...possibleNames) {
-    for (let name of possibleNames) {
-      for (let i = 0; i < headers.length; i++) {
-        if (headers[i] && headers[i].toString().toLowerCase() === name.toLowerCase()) {
-          return i;
-        }
-      }
-    }
-    return -1;
-  }
-  
-  /**
-   * Récupère la liste des commandes importées
-   * 
-   * @return {Array} La liste des commandes importées
-   */
-  function getImportedCommandes() {
+    // Essayer d'écrire dans les logs
     try {
-      Logger.log("Début de getImportedCommandes");
-      const ss = getSpreadsheet();
-      
-      // Vérifier et créer les feuilles si elles n'existent pas
-      let sheetShopify = ss.getSheetByName('Import Shopify');
-      let sheetYoucan = ss.getSheetByName('Import Youcan');
-      
-      if (!sheetShopify) {
-        Logger.log("Création de la feuille 'Import Shopify'");
-        sheetShopify = ss.insertSheet('Import Shopify');
-        sheetShopify.appendRow([
-          'ID Commande', 'Client', 'Téléphone', 'Adresse', 'Ville', 
-          'Produit', 'Quantité', 'Prix', 'Date', 'Source'
-        ]);
-        // Mettre en forme l'en-tête
-        sheetShopify.getRange(1, 1, 1, 10).setFontWeight('bold').setBackground('#f3f3f3');
-      }
-      
-      if (!sheetYoucan) {
-        Logger.log("Création de la feuille 'Import Youcan'");
-        sheetYoucan = ss.insertSheet('Import Youcan');
-        sheetYoucan.appendRow([
-          'ID Commande', 'Client', 'Téléphone', 'Adresse', 'Ville', 
-          'Produit', 'Quantité', 'Prix', 'Date', 'Source'
-        ]);
-        // Mettre en forme l'en-tête
-        sheetYoucan.getRange(1, 1, 1, 10).setFontWeight('bold').setBackground('#f3f3f3');
-      }
-      
-      let commandes = [];
-      
-      // Récupérer les commandes Shopify
-      if (sheetShopify && sheetShopify.getLastRow() > 1) {
-        Logger.log("Récupération des données Shopify");
-        const shopifyData = sheetShopify.getRange(2, 1, sheetShopify.getLastRow() - 1, 10).getValues();
-        shopifyData.forEach(function(row) {
-          commandes.push({
-            idCommande: row[0],
-            client: row[1],
-            telephone: row[2],
-            adresse: row[3],
-            ville: row[4],
-            produit: row[5],
-            quantite: row[6],
-            prix: row[7],
-            date: row[8],
-            source: row[9],
-            statut: 'non_verifie'
-          });
-        });
-      } else {
-        Logger.log("Pas de données Shopify à récupérer");
-      }
-      
-      // Récupérer les commandes Youcan
-      if (sheetYoucan && sheetYoucan.getLastRow() > 1) {
-        Logger.log("Récupération des données Youcan");
-        const youcanData = sheetYoucan.getRange(2, 1, sheetYoucan.getLastRow() - 1, 10).getValues();
-        youcanData.forEach(function(row) {
-          commandes.push({
-            idCommande: row[0],
-            client: row[1],
-            telephone: row[2],
-            adresse: row[3],
-            ville: row[4],
-            produit: row[5],
-            quantite: row[6],
-            prix: row[7],
-            date: row[8],
-            source: row[9],
-            statut: 'non_verifie'
-          });
-        });
-      } else {
-        Logger.log("Pas de données Youcan à récupérer");
-      }
-      
-      Logger.log("Vérification des commandes");
-      // Détecter les doublons et les problèmes
-      return verifierCommandes(commandes);
-    } catch (err) {
-      Logger.log("Erreur dans getImportedCommandes: " + err.toString());
-      // Renvoyer un tableau vide en cas d'erreur
-      return [];
-    }
-  }
-  
-  /**
-   * Vérifie les commandes pour détecter les doublons et les problèmes
-   * 
-   * @param {Array} commandes La liste des commandes à vérifier
-   * @return {Array} La liste des commandes avec leur statut
-   */
-  function verifierCommandes(commandes) {
-    const ss = getSpreadsheet();
-    const sheetInitiale = ss.getSheetByName(CONFIG.SHEETS.INITIALE);
-    
-    let commandesExistantes = [];
-    
-    // Récupérer les ID des commandes existantes
-    if (sheetInitiale && sheetInitiale.getLastRow() > 1) {
-      const idCol = 2; // Colonne B, ID source
-      commandesExistantes = sheetInitiale.getRange(2, idCol, sheetInitiale.getLastRow() - 1, 1).getValues().flat();
-    }
-    
-    // Créer un index des téléphones pour détecter les doublons
-    const telephonesIndex = {};
-    
-    // Premier passage : détecter les commandes déjà existantes dans le système
-    commandes.forEach(function(commande) {
-      // Vérifier si la commande existe déjà dans le système
-      if (commandesExistantes.includes(commande.idCommande)) {
-        commande.statut = 'doublon';
-        commande.doublonType = 'systeme';
-        return;
-      }
-      
-      // Formater le téléphone pour la détection de doublons
-      const telephone = formaterTelephone(commande.telephone);
-      
-      // Enregistrer le téléphone dans l'index
-      if (telephone) {
-        if (!telephonesIndex[telephone]) {
-          telephonesIndex[telephone] = [];
-        }
-        telephonesIndex[telephone].push(commande);
-      }
-      
-      // Vérifier les données obligatoires
-      if (!commande.client || !commande.telephone || !commande.produit) {
-        commande.statut = 'verification';
-        return;
-      }
-      
-      commande.statut = 'ok';
-    });
-    
-    // Deuxième passage : détecter les doublons de téléphone dans le lot actuel
-    for (const telephone in telephonesIndex) {
-      if (telephonesIndex[telephone].length > 1) {
-        // Marquer tous les doublons sauf le premier
-        for (let i = 1; i < telephonesIndex[telephone].length; i++) {
-          telephonesIndex[telephone][i].statut = 'doublon';
-          telephonesIndex[telephone][i].doublonType = 'telephone';
-        }
-      }
-    }
-    
-    return commandes;
-  }
-  
-  /**
-   * Traite toutes les données importées
-   * 
-   * @return {Object} Résultat du traitement
-   */
-  function processImportedData() {
-    const commandes = getImportedCommandes();
-    
-    // Compter les différents types de commandes
-    let totalCount = commandes.length;
-    let validCount = 0;
-    let doublonCount = 0;
-    let verificationCount = 0;
-    
-    commandes.forEach(function(commande) {
-      if (commande.statut === 'doublon') {
-        doublonCount++;
-      } else if (commande.statut === 'verification') {
-        verificationCount++;
-      } else {
-        validCount++;
-      }
-    });
-    
-    return {
-      success: true,
-      message: `Traitement terminé. ${totalCount} commandes traitées: ${validCount} valides, ${doublonCount} doublons, ${verificationCount} à vérifier.`,
-      total: totalCount,
-      valid: validCount,
-      doublon: doublonCount,
-      verification: verificationCount
-    };
-  }
-  
-  /**
-   * Valide une commande et l'envoie au système
-   * 
-   * @param {string} idCommande L'ID de la commande à valider
-   * @return {Object} Résultat de la validation
-   */
-  function validateCommande(idCommande) {
-    const ss = getSpreadsheet();
-    const sheetShopify = ss.getSheetByName('Import Shopify');
-    const sheetYoucan = ss.getSheetByName('Import Youcan');
-    const sheetInitiale = ss.getSheetByName(CONFIG.SHEETS.INITIALE);
-    
-    if (!sheetInitiale) {
-      return { success: false, message: 'La feuille des commandes n\'existe pas.' };
-    }
-    
-    let commande = null;
-    let sheetSource = null;
-    let rowIndex = 0;
-    
-    // Rechercher la commande dans Shopify
-    if (sheetShopify) {
-      const shopifyData = sheetShopify.getDataRange().getValues();
-      for (let i = 1; i < shopifyData.length; i++) {
-        if (shopifyData[i][0] === idCommande) {
-          commande = {
-            idCommande: shopifyData[i][0],
-            client: shopifyData[i][1],
-            telephone: shopifyData[i][2],
-            adresse: shopifyData[i][3],
-            ville: shopifyData[i][4],
-            produit: shopifyData[i][5],
-            quantite: shopifyData[i][6],
-            prix: shopifyData[i][7],
-            date: shopifyData[i][8],
-            source: shopifyData[i][9]
-          };
-          sheetSource = sheetShopify;
-          rowIndex = i + 1;
-          break;
-        }
-      }
-    }
-    
-    // Si non trouvée, rechercher dans Youcan
-    if (!commande && sheetYoucan) {
-      const youcanData = sheetYoucan.getDataRange().getValues();
-      for (let i = 1; i < youcanData.length; i++) {
-        if (youcanData[i][0] === idCommande) {
-          commande = {
-            idCommande: youcanData[i][0],
-            client: youcanData[i][1],
-            telephone: youcanData[i][2],
-            adresse: youcanData[i][3],
-            ville: youcanData[i][4],
-            produit: youcanData[i][5],
-            quantite: youcanData[i][6],
-            prix: youcanData[i][7],
-            date: youcanData[i][8],
-            source: youcanData[i][9]
-          };
-          sheetSource = sheetYoucan;
-          rowIndex = i + 1;
-          break;
-        }
-      }
-    }
-    
-    if (!commande) {
-      return { success: false, message: 'Commande non trouvée.' };
-    }
-    
-    // Formater le téléphone
-    const telephone = formaterTelephone(commande.telephone);
-    
-    // Générer un numéro de commande unique
-    const numeroCommande = genererNumeroCommande(commande.source);
-    
-    // Ajouter la commande à la feuille initiale
-    sheetInitiale.appendRow([
-      numeroCommande,
-      commande.idCommande,
-      CONFIG.STATUTS.NON_AFFECTEE,
-      '',
-      commande.client,
-      telephone,
-      commande.adresse,
-      commande.ville,
-      commande.produit,
-      commande.quantite,
-      commande.prix,
-      new Date(),
-      formaterDate(commande.date || new Date())
-    ]);
-    
-    // Supprimer la commande de la feuille source
-    sheetSource.deleteRow(rowIndex);
-    
-    // Enregistrer l'action dans le journal
-    enregistrerLog(
-      Session.getActiveUser().getEmail(),
-      numeroCommande,
-      'Validation de la commande ' + commande.idCommande
-    );
-    
-    return { 
-      success: true, 
-      message: 'Commande validée et ajoutée au système.' 
-    };
-  }
-  
-  /**
-   * Valide toutes les commandes sans erreur
-   * 
-   * @return {Object} Résultat de la validation
-   */
-  function validateAllCommandes() {
-    const commandes = getImportedCommandes();
-    let validCount = 0;
-    
-    // Filtrer les commandes valides
-    const validCommandes = commandes.filter(commande => commande.statut === 'ok');
-    
-    // Valider chaque commande
-    validCommandes.forEach(function(commande) {
-      const result = validateCommande(commande.idCommande);
-      if (result.success) {
-        validCount++;
-      }
-    });
-    
-    return {
-      success: true,
-      message: `${validCount} commandes validées et ajoutées au système.`,
-      count: validCount
-    };
-  }
-  
-  /**
-   * Supprime une commande importée
-   * 
-   * @param {string} idCommande L'ID de la commande à supprimer
-   * @return {Object} Résultat de la suppression
-   */
-  function deleteImportedCommande(idCommande) {
-    const ss = getSpreadsheet();
-    const sheetShopify = ss.getSheetByName('Import Shopify');
-    const sheetYoucan = ss.getSheetByName('Import Youcan');
-    
-    let deleted = false;
-    
-    // Rechercher et supprimer dans Shopify
-    if (sheetShopify) {
-      const shopifyData = sheetShopify.getDataRange().getValues();
-      for (let i = 1; i < shopifyData.length; i++) {
-        if (shopifyData[i][0] === idCommande) {
-          sheetShopify.deleteRow(i + 1);
-          deleted = true;
-          break;
-        }
-      }
-    }
-    
-    // Si non trouvée, rechercher et supprimer dans Youcan
-    if (!deleted && sheetYoucan) {
-      const youcanData = sheetYoucan.getDataRange().getValues();
-      for (let i = 1; i < youcanData.length; i++) {
-        if (youcanData[i][0] === idCommande) {
-          sheetYoucan.deleteRow(i + 1);
-          deleted = true;
-          break;
-        }
-      }
-    }
-    
-    if (!deleted) {
-      return { success: false, message: 'Commande non trouvée.' };
-    }
-    
-    return { 
-      success: true, 
-      message: 'Commande supprimée.' 
-    };
-  }
-
-  /**
-   * Fonction simple pour tester que le module est correctement chargé
-   * Elle peut être appelée depuis CMDInitPanel.html pour vérifier que le module fonctionne
-   * 
-   * @return {string} Message de confirmation
-   */
-  function testCMDInitModule() {
-    try {
-      Logger.log("Fonction testCMDInitModule appelée avec succès");
-      return "Le module CMDInit fonctionne correctement.";
+      Logger.log(`ERREUR [${source}]: ${error.toString()}`);
     } catch (e) {
-      Logger.log("Erreur dans testCMDInitModule: " + e.toString());
-      return "Erreur dans le module CMDInit: " + e.toString();
+      // Ignorer si Logger n'est pas disponible
     }
+  } catch (e) {
+    // En cas d'erreur, simplement ignorer
+    console.error("Erreur lors de la journalisation:", e);
   }
+}
+
+/**
+ * Récupère les données depuis le Google Sheet externe spécifié
+ * 
+ * @return {Object} Les données récupérées sous forme d'objet
+ */
+function recupererDonneesExterne() {
+  try {
+    // URL du fichier Google Sheet externe
+    const url = "https://docs.google.com/spreadsheets/d/1OK2Ndvc9dyUV99sJDLJ3tYSvtECijG-CM0QlGClYduU/edit";
+    
+    // Ouvrir le fichier externe en utilisant son URL
+    const fichierExterne = SpreadsheetApp.openByUrl(url);
+    
+    // Récupérer les noms de toutes les feuilles
+    const feuilles = fichierExterne.getSheets();
+    const nomsFeuilles = feuilles.map(feuille => feuille.getName());
+    
+    // Récupérer les données de chaque feuille
+    const donnees = {};
+    
+    feuilles.forEach(feuille => {
+      const nomFeuille = feuille.getName();
+      donnees[nomFeuille] = feuille.getDataRange().getValues();
+    });
+    
+    return {
+      success: true,
+      nomsFeuilles: nomsFeuilles,
+      donnees: donnees
+    };
+  } catch (error) {
+    logError(error, 'recupererDonneesExterne');
+    return {
+      success: false,
+      message: error.toString()
+    };
+  }
+}
+
+/**
+ * Récupère les données d'une feuille spécifique du Google Sheet externe
+ * 
+ * @param {string} nomFeuille - Le nom de la feuille à récupérer
+ * @return {Object} Les données récupérées sous forme d'objet
+ */
+function recupererFeuilleSpecifique(nomFeuille) {
+  try {
+    // URL du fichier Google Sheet externe
+    const url = "https://docs.google.com/spreadsheets/d/1OK2Ndvc9dyUV99sJDLJ3tYSvtECijG-CM0QlGClYduU/edit";
+    
+    // Ouvrir le fichier externe en utilisant son URL
+    const fichierExterne = SpreadsheetApp.openByUrl(url);
+    
+    // Récupérer la feuille spécifiée
+    const feuille = fichierExterne.getSheetByName(nomFeuille);
+    
+    if (!feuille) {
+      return {
+        success: false,
+        message: `La feuille "${nomFeuille}" n'existe pas dans le fichier.`
+      };
+    }
+    
+    // Récupérer toutes les données de la feuille
+    const donnees = feuille.getDataRange().getValues();
+    
+    return {
+      success: true,
+      nomFeuille: nomFeuille,
+      donnees: donnees
+    };
+  } catch (error) {
+    logError(error, `recupererFeuilleSpecifique(${nomFeuille})`);
+    return {
+      success: false,
+      message: error.toString()
+    };
+  }
+}
+
+/**
+ * Importe les données d'une feuille spécifique du Google Sheet externe vers la feuille active
+ * 
+ * @param {string} nomFeuille - Le nom de la feuille à importer
+ * @param {string} feuilleDestination - Le nom de la feuille de destination dans le fichier actif
+ * @return {Object} Résultat de l'importation
+ */
+function importerDonnees(nomFeuille, feuilleDestination) {
+  try {
+    // Récupérer les données de la feuille spécifiée
+    const resultat = recupererFeuilleSpecifique(nomFeuille);
+    
+    if (!resultat.success) {
+      return resultat;
+    }
+    
+    // Récupérer le fichier actif
+    const fichierActif = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Vérifier si la feuille de destination existe, sinon la créer
+    let feuilleActive = fichierActif.getSheetByName(feuilleDestination);
+    if (!feuilleActive) {
+      feuilleActive = fichierActif.insertSheet(feuilleDestination);
+    } else {
+      // Effacer les données existantes
+      feuilleActive.clear();
+    }
+    
+    // Vérifier si des données ont été récupérées
+    if (resultat.donnees.length === 0) {
+      return {
+        success: false,
+        message: "Aucune donnée n'a été trouvée dans la feuille spécifiée."
+      };
+    }
+    
+    // Importer les données
+    const range = feuilleActive.getRange(1, 1, resultat.donnees.length, resultat.donnees[0].length);
+    range.setValues(resultat.donnees);
+    
+    return {
+      success: true,
+      message: `Les données ont été importées avec succès vers la feuille "${feuilleDestination}".`,
+      nbLignes: resultat.donnees.length,
+      nbColonnes: resultat.donnees[0].length
+    };
+  } catch (error) {
+    logError(error, `importerDonnees(${nomFeuille}, ${feuilleDestination})`);
+    return {
+      success: false,
+      message: error.toString()
+    };
+  }
+}
+
+/**
+ * Fonction pour récupérer la liste des feuilles du Google Sheet externe
+ * 
+ * @return {Object} La liste des noms de feuilles
+ */
+function getListeFeuilles() {
+  try {
+    // URL du fichier Google Sheet externe
+    const url = "https://docs.google.com/spreadsheets/d/1OK2Ndvc9dyUV99sJDLJ3tYSvtECijG-CM0QlGClYduU/edit";
+    
+    // Ouvrir le fichier externe en utilisant son URL
+    const fichierExterne = SpreadsheetApp.openByUrl(url);
+    
+    // Récupérer les noms de toutes les feuilles
+    const feuilles = fichierExterne.getSheets();
+    const nomsFeuilles = feuilles.map(feuille => feuille.getName());
+    
+    return {
+      success: true,
+      nomsFeuilles: nomsFeuilles
+    };
+  } catch (error) {
+    logError(error, 'getListeFeuilles');
+    return {
+      success: false,
+      message: error.toString()
+    };
+  }
+}
+
+/**
+ * Fonction simplifiée pour récupérer un aperçu des données d'une feuille
+ * Cette fonction est optimisée pour l'aperçu et retourne directement un HTML formaté
+ * 
+ * @param {string} nomFeuille - Le nom de la feuille à récupérer
+ * @return {string} Contenu HTML formaté pour l'aperçu
+ */
+function getApercuHTML(nomFeuille) {
+  try {
+    // URL du fichier Google Sheet externe
+    const url = "https://docs.google.com/spreadsheets/d/1OK2Ndvc9dyUV99sJDLJ3tYSvtECijG-CM0QlGClYduU/edit";
+    
+    // Ouvrir le fichier externe en utilisant son URL
+    const fichierExterne = SpreadsheetApp.openByUrl(url);
+    
+    // Récupérer la feuille spécifiée
+    const feuille = fichierExterne.getSheetByName(nomFeuille);
+    
+    if (!feuille) {
+      return "<p style='color: red;'>La feuille \"" + nomFeuille + "\" n'existe pas dans le fichier.</p>";
+    }
+    
+    // Récupérer les données (limité à 10 lignes pour l'aperçu)
+    const plage = feuille.getRange(1, 1, Math.min(11, feuille.getLastRow()), feuille.getLastColumn());
+    const donnees = plage.getValues();
+    
+    if (donnees.length === 0) {
+      return "<p style='color: red;'>Aucune donnée n'a été trouvée dans la feuille \"" + nomFeuille + "\".</p>";
+    }
+    
+    // Créer le tableau HTML
+    let html = "<table style='width:100%; border-collapse:collapse; margin-top:10px;'>";
+    
+    // En-tête (première ligne)
+    html += "<thead><tr>";
+    for (let i = 0; i < donnees[0].length; i++) {
+      html += "<th style='border:1px solid #ddd; padding:8px; text-align:left; background-color:#f2f2f2;'>" + 
+              (donnees[0][i] !== null ? donnees[0][i].toString() : "") + "</th>";
+    }
+    html += "</tr></thead>";
+    
+    // Corps du tableau (autres lignes)
+    html += "<tbody>";
+    for (let i = 1; i < donnees.length; i++) {
+      html += "<tr>";
+      for (let j = 0; j < donnees[i].length; j++) {
+        html += "<td style='border:1px solid #ddd; padding:8px; text-align:left;'>" + 
+                (donnees[i][j] !== null ? donnees[i][j].toString() : "") + "</td>";
+      }
+      html += "</tr>";
+    }
+    html += "</tbody></table>";
+    
+    // Ajouter un message de succès
+    const infoMessage = "<p style='color: green;'>Aperçu de la feuille \"" + nomFeuille + 
+                       "\" (" + (donnees.length-1) + " lignes sur " + (feuille.getLastRow()-1) + " au total)</p>";
+    
+    return infoMessage + html;
+  } catch (error) {
+    console.error("Erreur dans getApercuHTML:", error);
+    return "<p style='color: red;'>Erreur lors de la récupération des données: " + error.toString() + "</p>";
+  }
+}
