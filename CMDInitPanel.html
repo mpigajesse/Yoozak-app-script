@@ -103,6 +103,78 @@
       th {
         background-color: #f2f2f2;
       }
+      .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+      }
+      .step {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        margin: 0 5px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+      }
+      .step::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 4px;
+        width: 100%;
+        background-color: #ddd;
+      }
+      .step.waiting {
+        background-color: #f8f9fa;
+        color: #6c757d;
+        border-color: #ddd;
+      }
+      .step.waiting::before {
+        background-color: #ddd;
+      }
+      .step.active {
+        background-color: #cfe2ff;
+        color: #004085;
+        border-color: #b8daff;
+        font-weight: bold;
+        box-shadow: 0 0 10px rgba(0, 64, 133, 0.2);
+      }
+      .step.active::before {
+        background-color: #007bff;
+      }
+      .step.processing {
+        background-color: #fff3cd;
+        color: #856404;
+        border-color: #ffeeba;
+      }
+      .step.processing::before {
+        background-color: #ffc107;
+      }
+      .step.completed {
+        background-color: #d4edda;
+        color: #155724;
+        border-color: #c3e6cb;
+      }
+      .step.completed::before {
+        background-color: #28a745;
+      }
+      .step.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border-color: #f5c6cb;
+      }
+      .step.error::before {
+        background-color: #dc3545;
+      }
+      .doublons-highlight {
+        background-color: #F8D7DA !important;
+        color: #721c24 !important;
+      }
     </style>
   </head>
   <body>
@@ -160,100 +232,205 @@
 
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4 main-content">
           <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-            <h1 class="h2">Importation des données</h1>
+            <h1 class="h2">Importation des données CMD initiale</h1>
             <div class="btn-toolbar mb-2 mb-md-0">
-              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="recupererListeFeuilles()">
-                <i class="material-icons">refresh</i> Actualiser
+              <button type="button" class="btn btn-primary" onclick="demarrerProcessusAutomatique()">
+                <i class="material-icons align-middle">play_circle_filled</i> Démarrer le processus automatique
               </button>
             </div>
           </div>
 
-          <!-- Section 1: Afficher les feuilles disponibles -->
+          <!-- Indicateur de progression -->
+          <div class="step-indicator mb-4">
+            <div id="step1" class="step">1. Récupération des feuilles</div>
+            <div id="step2" class="step">2. Fusion (si nécessaire)</div>
+            <div id="step3" class="step">3. Aperçu des données</div>
+            <div id="step4" class="step">4. Traitement CMD initiale</div>
+          </div>
+
+          <!-- Explication du flux de processus -->
           <div class="card mb-4">
-            <div class="card-header">
-              <h5 class="mb-0">1. Afficher les feuilles disponibles</h5>
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0">Flux du processus</h5>
             </div>
             <div class="card-body">
-              <p>Cliquez sur le bouton ci-dessous pour récupérer la liste des feuilles disponibles dans le fichier Google Sheets.</p>
-              <button id="btnListeFeuilles" class="btn btn-primary" onclick="recupererListeFeuilles()">
-                <i class="material-icons align-middle">list</i> Récupérer la liste des feuilles
-              </button>
-              
-              <div id="resultListeFeuilles" class="result"></div>
-              
-              <div id="loadingFeuilles" class="loading">
-                <div class="spinner"></div>
-                <p>Chargement en cours...</p>
-              </div>
-              
-              <div id="tableauFeuilles" style="display: none; margin-top: 20px;">
-                <h6>Feuilles disponibles :</h6>
-                <table class="table table-bordered table-striped">
-                  <thead class="thead-light">
-                    <tr>
-                      <th>Nom de la feuille</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
+              <div class="process-flow">
+                <div class="row text-center">
+                  <div class="col-md-3">
+                    <div class="card mb-2">
+                      <div class="card-body">
+                        <h5>Étape 1</h5>
+                        <p>Récupération des feuilles Shopify et Youcan du Google Sheet source</p>
+                        <button class="btn btn-sm btn-info" onclick="executerEtape(1)">Exécuter cette étape</button>
+                      </div>
+                    </div>
+                    <i class="material-icons">arrow_downward</i>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="card mb-2">
+                      <div class="card-body">
+                        <h5>Étape 2</h5>
+                        <p>Fusion des feuilles en une feuille CMDinit unique avec coloration des doublons</p>
+                        <button class="btn btn-sm btn-info" onclick="executerEtape(2)">Exécuter cette étape</button>
+                      </div>
+                    </div>
+                    <i class="material-icons">arrow_downward</i>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="card mb-2">
+                      <div class="card-body">
+                        <h5>Étape 3</h5>
+                        <p>Génération d'un aperçu des données pour vérification</p>
+                        <button class="btn btn-sm btn-info" onclick="executerEtape(3)">Exécuter cette étape</button>
+                      </div>
+                    </div>
+                    <i class="material-icons">arrow_downward</i>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="card mb-2">
+                      <div class="card-body">
+                        <h5>Étape 4</h5>
+                        <p>Traitement final et affichage de CMD initiale avec doublons</p>
+                        <button class="btn btn-sm btn-info" onclick="executerEtape(4)">Exécuter cette étape</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Section 2: Importer une feuille spécifique -->
+          <!-- Affichage des résultats -->
           <div class="card mb-4">
-            <div class="card-header">
-              <h5 class="mb-0">2. Importer une feuille spécifique</h5>
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Processus automatique</h5>
             </div>
             <div class="card-body">
-              <div class="form-group">
-                <label for="selectFeuille">Sélectionnez une feuille à importer :</label>
-                <select id="selectFeuille" class="form-control">
-                  <option value="">-- Veuillez d'abord récupérer la liste des feuilles --</option>
-                </select>
+              <div class="alert alert-info">
+                <i class="material-icons align-middle">info</i> 
+                Ce processus va automatiquement:
+                <ul>
+                  <li>Récupérer les feuilles Shopify et Youcan</li>
+                  <li>Les fusionner dans une feuille nommée CMDinit si les deux types sont présents</li>
+                  <li>Afficher un aperçu des données</li>
+                  <li>Traiter les données pour CMD initiale (formatage téléphone/date, identification doublons, etc.)</li>
+                </ul>
+                <div class="mt-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="forceDoublonsCheck">
+                    <label class="form-check-label" for="forceDoublonsCheck">
+                      <strong>Forcer la coloration des doublons</strong> (activer si les doublons ne sont pas colorés automatiquement)
+                    </label>
+                  </div>
+                </div>
               </div>
-              
-              <div class="form-group">
-                <label for="inputFeuilleDestination">Nom de la feuille de destination :</label>
-                <input type="text" id="inputFeuilleDestination" class="form-control" placeholder="Nom de la feuille dans le fichier actif">
-              </div>
-              
-              <button id="btnImporter" class="btn btn-success" onclick="importerFeuille()" disabled>
-                <i class="material-icons align-middle">file_download</i> Importer les données
-              </button>
-              
-              <div id="resultImport" class="result"></div>
-              
-              <div id="loadingImport" class="loading">
-                <div class="spinner"></div>
-                <p>Importation en cours...</p>
-              </div>
-            </div>
-          </div>
 
-          <!-- Section 3: Afficher un aperçu des données -->
-          <div class="card mb-4">
-            <div class="card-header">
-              <h5 class="mb-0">3. Afficher un aperçu des données</h5>
-            </div>
-            <div class="card-body">
-              <div class="form-group">
-                <label for="selectFeuilleApercu">Sélectionnez une feuille pour voir un aperçu :</label>
-                <select id="selectFeuilleApercu" class="form-control">
-                  <option value="">-- Veuillez d'abord récupérer la liste des feuilles --</option>
-                </select>
-              </div>
-              
-              <button id="btnApercuSimple" class="btn btn-info" onclick="afficherApercuSimple()" disabled>
-                <i class="material-icons align-middle">visibility</i> Afficher l'aperçu
-              </button>
-              
-              <div id="loadingApercuSimple" class="loading">
+              <div id="loadingProcessus" class="loading">
                 <div class="spinner"></div>
-                <p>Chargement de l'aperçu...</p>
+                <p>Traitement automatique en cours...</p>
+                <div id="etapeActuelle" class="text-info"></div>
               </div>
               
-              <div id="contenuApercuSimple" class="mt-3"></div>
+              <div id="resultProcessus" class="result"></div>
+              
+              <!-- Résultats détaillés -->
+              <div id="resultatsDetailles" style="display:none;">
+                <div class="card mb-3">
+                  <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">Rapport du processus</h6>
+                  </div>
+                  <div class="card-body">
+                    <div id="rapportFusion" class="alert alert-secondary"></div>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="card border-success mb-3">
+                          <div class="card-header bg-success text-white">Commandes traitées</div>
+                          <div class="card-body">
+                            <h5 class="card-title" id="nbCommandesTraitees">0</h5>
+                            <p class="card-text">Commandes importées dans CMD initiale</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="card border-warning mb-3">
+                          <div class="card-header bg-warning text-dark">Problèmes détectés</div>
+                          <div class="card-body">
+                            <h5 class="card-title" id="nbProblemes">0</h5>
+                            <p class="card-text">Commandes déplacées vers CMD problème</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Aperçu des données -->
+                <div class="card mb-3">
+                  <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0">Aperçu des données source</h6>
+                  </div>
+                  <div class="card-body">
+                    <div id="contenuApercu"></div>
+                  </div>
+                </div>
+                
+                <!-- CMD Initiale après traitement -->
+                <div class="card" id="cmdInitialeCard">
+                  <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                      <i class="material-icons align-middle">list_alt</i>
+                      CMD Initiale après traitement
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="mb-4">
+                      <div class="row">
+                        <div class="col-md-4">
+                          <div class="card border-warning">
+                            <div class="card-body text-center">
+                              <h3 class="text-warning" id="cmdNonAffectees">0</h3>
+                              <p class="mb-0">Non affectées</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="card border-success">
+                            <div class="card-body text-center">
+                              <h3 class="text-success" id="cmdAffectees">0</h3>
+                              <p class="mb-0">Affectées</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="card border-danger">
+                            <div class="card-body text-center">
+                              <h3 class="text-danger" id="cmdProblemes">0</h3>
+                              <p class="mb-0">Problèmes</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Ajout d'une barre de recherche pour filtrer les commandes -->
+                    <div class="form-group mb-3">
+                      <div class="input-group">
+                        <div class="input-group-prepend">
+                          <span class="input-group-text">
+                            <i class="material-icons">search</i>
+                          </span>
+                        </div>
+                        <input type="text" id="searchCMDInitiale" class="form-control" placeholder="Rechercher dans les commandes..." onkeyup="filterCMDInitiale()">
+                        <div class="input-group-append">
+                          <button class="btn btn-outline-secondary" type="button" onclick="clearFilter()">
+                            <i class="material-icons">clear</i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="cmdInitialeData" class="table-responsive" style="max-height: 600px; overflow-y: auto;"></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </main>
@@ -263,181 +440,509 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+      // Variables globales pour suivre l'état du processus
+      let etapesResultats = {
+        1: null, // Récupération des feuilles
+        2: null, // Fusion des feuilles
+        3: null, // Aperçu des données
+        4: null  // Traitement CMD initiale
+      };
+      
       // Afficher l'email de l'utilisateur connecté
       google.script.run.withSuccessHandler(function(email) {
         document.getElementById('user-email').textContent = email;
       }).getActiveUserEmail();
 
-      // Fonction pour récupérer la liste des feuilles
-      function recupererListeFeuilles() {
-        // Afficher le chargement
-        document.getElementById('loadingFeuilles').style.display = 'block';
-        document.getElementById('resultListeFeuilles').style.display = 'none';
-        document.getElementById('tableauFeuilles').style.display = 'none';
+      // Fonction pour mettre à jour l'état des étapes
+      function updateStepStatus(stepId, status) {
+        const step = document.getElementById(stepId);
         
-        // Appeler la fonction du serveur
-        google.script.run
-          .withSuccessHandler(afficherListeFeuilles)
-          .withFailureHandler(afficherErreurFeuilles)
-          .getListeFeuilles();
+        // Réinitialiser toutes les classes
+        step.className = 'step';
+        
+        // Ajouter la classe appropriée
+        if (status === 'waiting') {
+          step.classList.add('waiting');
+        } else if (status === 'active') {
+          step.classList.add('active');
+        } else if (status === 'processing') {
+          step.classList.add('processing');
+        } else if (status === 'completed') {
+          step.classList.add('completed');
+        } else if (status === 'error') {
+          step.classList.add('error');
+        }
       }
       
-      // Fonction pour afficher la liste des feuilles
-      function afficherListeFeuilles(resultat) {
-        // Masquer le chargement
-        document.getElementById('loadingFeuilles').style.display = 'none';
+      // Fonction pour exécuter une étape spécifique
+      function executerEtape(numeroEtape) {
+        // Vérifier si les étapes précédentes ont été exécutées si nécessaire
+        if (numeroEtape > 1 && !etapesResultats[numeroEtape - 1]) {
+          alert("Vous devez d'abord exécuter l'étape " + (numeroEtape - 1));
+          return;
+        }
         
-        if (resultat.success) {
-          // Afficher les feuilles dans le tableau
-          var tbody = document.querySelector('#tableauFeuilles tbody');
-          tbody.innerHTML = ''; // Effacer le contenu précédent
-          
-          resultat.nomsFeuilles.forEach(function(nom) {
-            var tr = document.createElement('tr');
-            var td = document.createElement('td');
-            td.textContent = nom;
-            tr.appendChild(td);
-            tbody.appendChild(tr);
-          });
-          
-          document.getElementById('tableauFeuilles').style.display = 'block';
-          
-          // Mettre à jour les listes déroulantes
-          var selectFeuille = document.getElementById('selectFeuille');
-          var selectFeuilleApercu = document.getElementById('selectFeuilleApercu');
-          
-          // Effacer les options précédentes
-          selectFeuille.innerHTML = '';
-          selectFeuilleApercu.innerHTML = '';
-          
-          // Ajouter l'option par défaut
-          var defaultOption = document.createElement('option');
-          defaultOption.value = '';
-          defaultOption.textContent = '-- Sélectionnez une feuille --';
-          selectFeuille.appendChild(defaultOption.cloneNode(true));
-          selectFeuilleApercu.appendChild(defaultOption);
-          
-          // Ajouter les options pour chaque feuille
-          resultat.nomsFeuilles.forEach(function(nom) {
-            var option = document.createElement('option');
-            option.value = nom;
-            option.textContent = nom;
+        // Réinitialiser l'affichage des résultats pour cette étape
+        document.getElementById('resultatsDetailles').style.display = 'none';
+        document.getElementById('resultProcessus').style.display = 'none';
+        document.getElementById('loadingProcessus').style.display = 'block';
+        document.getElementById('etapeActuelle').innerHTML = `<strong>Exécution de l'étape ${numeroEtape}...</strong>`;
+        
+        // Mettre à jour le statut des étapes
+        for (let i = 1; i <= 4; i++) {
+          if (i < numeroEtape) {
+            updateStepStatus('step' + i, 'completed');
+          } else if (i === numeroEtape) {
+            updateStepStatus('step' + i, 'active');
+          } else {
+            updateStepStatus('step' + i, 'waiting');
+          }
+        }
+        
+        // Déterminer quelle fonction exécuter en fonction de l'étape
+        let fonctionServeur = '';
+        
+        switch (numeroEtape) {
+          case 1:
+            fonctionServeur = 'getListeFeuilles';
+            break;
+          case 2:
+            fonctionServeur = 'fusionnerFeuillesExterne';
+            break;
+          case 3:
+            // Utiliser la feuille fusionnée ou la dernière feuille traitée
+            let feuilleSource = '';
+            if (etapesResultats[2] && etapesResultats[2].feuilleFusionnee) {
+              feuilleSource = etapesResultats[2].feuilleFusionnee;
+            } else if (etapesResultats[2] && etapesResultats[2].feuilleUnique) {
+              feuilleSource = etapesResultats[2].feuilleUnique;
+            } else {
+              feuilleSource = 'CMDinit';
+            }
             
-            selectFeuille.appendChild(option.cloneNode(true));
-            selectFeuilleApercu.appendChild(option);
-          });
-          
-          // Activer les boutons
-          document.getElementById('btnImporter').disabled = false;
-          document.getElementById('btnApercuSimple').disabled = false;
-          
-          // Afficher un message de succès
-          var result = document.getElementById('resultListeFeuilles');
-          result.className = 'result success alert alert-success';
-          result.textContent = resultat.nomsFeuilles.length + ' feuilles ont été récupérées avec succès.';
-          result.style.display = 'block';
-        } else {
-          afficherErreurFeuilles(resultat.message);
-        }
-      }
-      
-      // Fonction pour afficher une erreur lors de la récupération des feuilles
-      function afficherErreurFeuilles(erreur) {
-        document.getElementById('loadingFeuilles').style.display = 'none';
-        
-        var result = document.getElementById('resultListeFeuilles');
-        result.className = 'result error alert alert-danger';
-        result.textContent = 'Erreur : ' + erreur;
-        result.style.display = 'block';
-      }
-      
-      // Fonction pour importer une feuille
-      function importerFeuille() {
-        var nomFeuille = document.getElementById('selectFeuille').value;
-        var feuilleDestination = document.getElementById('inputFeuilleDestination').value;
-        
-        if (!nomFeuille) {
-          alert('Veuillez sélectionner une feuille à importer.');
-          return;
-        }
-        
-        if (!feuilleDestination) {
-          alert('Veuillez saisir un nom pour la feuille de destination.');
-          return;
-        }
-        
-        // Afficher le chargement
-        document.getElementById('loadingImport').style.display = 'block';
-        document.getElementById('resultImport').style.display = 'none';
-        
-        // Appeler la fonction du serveur
-        google.script.run
-          .withSuccessHandler(afficherResultatImport)
-          .withFailureHandler(afficherErreurImport)
-          .importerDonnees(nomFeuille, feuilleDestination);
-      }
-      
-      // Fonction pour afficher le résultat de l'importation
-      function afficherResultatImport(resultat) {
-        // Masquer le chargement
-        document.getElementById('loadingImport').style.display = 'none';
-        
-        var result = document.getElementById('resultImport');
-        
-        if (resultat.success) {
-          result.className = 'result success alert alert-success';
-          result.innerHTML = '<strong>Succès :</strong> ' + resultat.message + '<br>' +
-                          '<strong>Nombre de lignes :</strong> ' + resultat.nbLignes + '<br>' +
-                          '<strong>Nombre de colonnes :</strong> ' + resultat.nbColonnes;
-        } else {
-          result.className = 'result error alert alert-danger';
-          result.textContent = 'Erreur : ' + resultat.message;
-        }
-        
-        result.style.display = 'block';
-      }
-      
-      // Fonction pour afficher une erreur lors de l'importation
-      function afficherErreurImport(erreur) {
-        document.getElementById('loadingImport').style.display = 'none';
-        
-        var result = document.getElementById('resultImport');
-        result.className = 'result error alert alert-danger';
-        result.textContent = 'Erreur : ' + erreur;
-        result.style.display = 'block';
-      }
-      
-      // Fonction pour afficher un aperçu des données
-      function afficherApercuSimple() {
-        var nomFeuille = document.getElementById('selectFeuilleApercu').value;
-        
-        if (!nomFeuille) {
-          alert('Veuillez sélectionner une feuille pour afficher l\'aperçu.');
-          return;
-        }
-        
-        // Afficher le chargement
-        document.getElementById('loadingApercuSimple').style.display = 'block';
-        document.getElementById('contenuApercuSimple').innerHTML = '';
-        
-        // Appeler la nouvelle fonction du serveur qui retourne directement du HTML
-        google.script.run
-          .withSuccessHandler(function(htmlContent) {
-            // Masquer le chargement
-            document.getElementById('loadingApercuSimple').style.display = 'none';
+            fonctionServeur = 'getApercuHTML';
+            google.script.run
+              .withSuccessHandler(resultatEtape3)
+              .withFailureHandler(function(error) { afficherErreurEtape(error, numeroEtape); })
+              .getApercuHTML(feuilleSource);
+            return;
+          case 4:
+            let forceDoublons = document.getElementById('forceDoublonsCheck').checked;
             
-            // Afficher le contenu HTML retourné directement
-            document.getElementById('contenuApercuSimple').innerHTML = htmlContent;
+            // Exécuter le traitement final
+            google.script.run
+              .withSuccessHandler(resultatEtape4)
+              .withFailureHandler(function(error) { afficherErreurEtape(error, numeroEtape); })
+              .traiterDonneesCMDInitiale(etapesResultats[2] && etapesResultats[2].feuilleFusionnee ? etapesResultats[2].feuilleFusionnee : 'CMDinit');
+            return;
+          default:
+            alert("Étape non reconnue");
+            return;
+        }
+        
+        // Exécuter la fonction serveur
+        google.script.run
+          .withSuccessHandler(function(result) {
+            traiterResultatEtape(result, numeroEtape);
           })
           .withFailureHandler(function(error) {
-            // Masquer le chargement
-            document.getElementById('loadingApercuSimple').style.display = 'none';
+            afficherErreurEtape(error, numeroEtape);
+          })[fonctionServeur]();
+      }
+      
+      // Traiter le résultat d'une étape
+      function traiterResultatEtape(result, numeroEtape) {
+        document.getElementById('loadingProcessus').style.display = 'none';
+        
+        if (result.success) {
+          // Stocker le résultat
+          etapesResultats[numeroEtape] = result;
+          
+          // Mettre à jour le statut de l'étape
+          updateStepStatus('step' + numeroEtape, 'completed');
+          
+          // Afficher un message de succès
+          var resultDiv = document.getElementById('resultProcessus');
+          resultDiv.className = 'result success alert alert-success';
+          resultDiv.innerHTML = `<strong>Étape ${numeroEtape} terminée avec succès :</strong> ${result.message || 'Opération réussie'}`;
+          resultDiv.style.display = 'block';
+          
+          // Afficher des détails spécifiques à l'étape
+          afficherDetailsEtape(result, numeroEtape);
+        } else {
+          afficherErreurEtape(result.message, numeroEtape);
+        }
+      }
+      
+      // Traiter le résultat de l'étape 3 (aperçu)
+      function resultatEtape3(htmlApercu) {
+        document.getElementById('loadingProcessus').style.display = 'none';
+        
+        // Vérifier si l'aperçu contient une erreur
+        if (htmlApercu.includes('Erreur') || htmlApercu.includes('erreur')) {
+          afficherErreurEtape(htmlApercu, 3);
+          return;
+        }
+        
+        // Stocker le résultat
+        etapesResultats[3] = { success: true, apercu: htmlApercu };
+        
+        // Mettre à jour le statut de l'étape
+        updateStepStatus('step3', 'completed');
+        
+        // Afficher un message de succès
+        var resultDiv = document.getElementById('resultProcessus');
+        resultDiv.className = 'result success alert alert-success';
+        resultDiv.innerHTML = '<strong>Étape 3 terminée avec succès :</strong> Aperçu des données généré';
+        resultDiv.style.display = 'block';
+        
+        // Afficher l'aperçu
+        document.getElementById('resultatsDetailles').style.display = 'block';
+        document.getElementById('contenuApercu').innerHTML = htmlApercu;
+      }
+      
+      // Traiter le résultat de l'étape 4 (traitement final)
+      function resultatEtape4(result) {
+        document.getElementById('loadingProcessus').style.display = 'none';
+        
+        if (result.success) {
+          // Stocker le résultat
+          etapesResultats[4] = result;
+          
+          // Mettre à jour le statut de l'étape
+          updateStepStatus('step4', 'completed');
+          
+          // Afficher un message de succès
+          var resultDiv = document.getElementById('resultProcessus');
+          resultDiv.className = 'result success alert alert-success';
+          resultDiv.innerHTML = '<strong>Étape 4 terminée avec succès :</strong> Traitement CMD initiale terminé';
+          resultDiv.style.display = 'block';
+          
+          // Récupérer et afficher les données CMD initiale
+          google.script.run
+            .withSuccessHandler(afficherCMDInitiale)
+            .withFailureHandler(function(error) {
+              document.getElementById('cmdInitialeData').innerHTML = 
+                "<div class='alert alert-warning'>Impossible d'afficher les données de CMD Initiale: " + error + "</div>";
+            })
+            .getCMDInitialeData();
+        } else {
+          afficherErreurEtape(result.message || "Erreur lors du traitement final", 4);
+        }
+      }
+      
+      // Afficher les détails d'une étape
+      function afficherDetailsEtape(result, numeroEtape) {
+        document.getElementById('resultatsDetailles').style.display = 'block';
+        
+        switch (numeroEtape) {
+          case 1:
+            // Afficher la liste des feuilles
+            let feuillesHTML = "<div class='card mb-3'><div class='card-header bg-info text-white'>Feuilles disponibles</div><div class='card-body'><ul>";
             
-            // Afficher l'erreur
-            document.getElementById('contenuApercuSimple').innerHTML = 
-              '<div class="alert alert-danger">Erreur : ' + error + '</div>';
-          })
-          .getApercuHTML(nomFeuille);
+            const feuillesShopify = result.nomsFeuilles.filter(nom => nom.toLowerCase().includes('shopify'));
+            const feuillesYoucan = result.nomsFeuilles.filter(nom => nom.toLowerCase().includes('youcan'));
+            
+            if (feuillesShopify.length > 0) {
+              feuillesHTML += "<li><strong>Feuilles Shopify :</strong> " + feuillesShopify.join(", ") + "</li>";
+            } else {
+              feuillesHTML += "<li><strong>Feuilles Shopify :</strong> Aucune</li>";
+            }
+            
+            if (feuillesYoucan.length > 0) {
+              feuillesHTML += "<li><strong>Feuilles Youcan :</strong> " + feuillesYoucan.join(", ") + "</li>";
+            } else {
+              feuillesHTML += "<li><strong>Feuilles Youcan :</strong> Aucune</li>";
+            }
+            
+            const autresFeuilles = result.nomsFeuilles.filter(nom => 
+              !nom.toLowerCase().includes('shopify') && !nom.toLowerCase().includes('youcan'));
+            
+            if (autresFeuilles.length > 0) {
+              feuillesHTML += "<li><strong>Autres feuilles :</strong> " + autresFeuilles.join(", ") + "</li>";
+            }
+            
+            feuillesHTML += "</ul></div></div>";
+            document.getElementById('resultatsDetailles').innerHTML = feuillesHTML;
+            break;
+            
+          case 2:
+            // Afficher les détails de la fusion
+            let fusionHTML = "<div class='card mb-3'><div class='card-header bg-info text-white'>Résultat de la fusion</div><div class='card-body'>";
+            
+            if (result.feuilleFusionnee) {
+              fusionHTML += "<p><strong>Feuille fusionnée :</strong> " + result.feuilleFusionnee + "</p>";
+              fusionHTML += "<p><strong>Nombre de lignes :</strong> " + result.totalLignes + "</p>";
+              fusionHTML += "<div class='alert alert-info'>Les doublons sont automatiquement colorés dans la feuille Google Sheets.</div>";
+              
+              if (document.getElementById('forceDoublonsCheck').checked) {
+                fusionHTML += "<div class='alert alert-warning'>L'option 'Forcer la coloration des doublons' est activée.</div>";
+              }
+            } else if (result.feuilleUnique) {
+              fusionHTML += "<p><strong>Feuille unique utilisée :</strong> " + result.feuilleUnique + "</p>";
+              fusionHTML += "<p>Aucune fusion nécessaire car un seul type de feuille est présent.</p>";
+            }
+            
+            fusionHTML += "</div></div>";
+            document.getElementById('resultatsDetailles').innerHTML = fusionHTML;
+            break;
+        }
+      }
+      
+      // Afficher CMD Initiale
+      function afficherCMDInitiale(result) {
+        if (result.success) {
+          // Mettre à jour les compteurs
+          document.getElementById('cmdNonAffectees').textContent = result.statuts.nonAffectees;
+          document.getElementById('cmdAffectees').textContent = result.statuts.affectees;
+          document.getElementById('cmdProblemes').textContent = result.statuts.problemes;
+          
+          // Afficher le tableau CMD Initiale
+          document.getElementById('cmdInitialeData').innerHTML = result.htmlApercu;
+          
+          // Si l'option de forçage des doublons est activée, appliquer manuellement la coloration
+          if (document.getElementById('forceDoublonsCheck').checked) {
+            colorerDoublons();
+          }
+        } else {
+          document.getElementById('cmdInitialeData').innerHTML = 
+            "<div class='alert alert-warning'>Impossible d'afficher les données de CMD Initiale: " + result.message + "</div>";
+        }
+      }
+      
+      // Colorer manuellement les doublons dans le tableau HTML
+      function colorerDoublons() {
+        const table = document.querySelector("#cmdInitialeData table");
+        if (!table) return;
+        
+        const rows = table.getElementsByTagName('tr');
+        const numCommandes = [];
+        const numCommandeIndex = 0; // Supposer que la première colonne est le numéro de commande
+        
+        // Première passe: collecter tous les numéros de commande
+        for (let i = 1; i < rows.length; i++) { // Commencer à 1 pour sauter l'en-tête
+          const cells = rows[i].getElementsByTagName('td');
+          if (cells.length > numCommandeIndex) {
+            numCommandes.push(cells[numCommandeIndex].textContent.trim());
+          }
+        }
+        
+        // Deuxième passe: trouver et marquer les doublons
+        for (let i = 1; i < rows.length; i++) {
+          const cells = rows[i].getElementsByTagName('td');
+          if (cells.length > numCommandeIndex) {
+            const numCommande = cells[numCommandeIndex].textContent.trim();
+            
+            // Compter les occurrences
+            const count = numCommandes.filter(num => num === numCommande).length;
+            
+            // Si c'est un doublon, appliquer le style
+            if (count > 1) {
+              rows[i].classList.add('doublons-highlight');
+            }
+          }
+        }
+      }
+      
+      // Afficher une erreur pour une étape
+      function afficherErreurEtape(message, numeroEtape) {
+        document.getElementById('loadingProcessus').style.display = 'none';
+        
+        // Mettre à jour le statut de l'étape
+        updateStepStatus('step' + numeroEtape, 'error');
+        
+        // Afficher le message d'erreur
+        var resultDiv = document.getElementById('resultProcessus');
+        resultDiv.className = 'result error alert alert-danger';
+        resultDiv.innerHTML = `<strong>Erreur à l'étape ${numeroEtape} :</strong> ${message}`;
+        resultDiv.style.display = 'block';
+      }
+      
+      // Fonction pour filtrer les commandes dans CMD Initiale
+      function filterCMDInitiale() {
+        const input = document.getElementById('searchCMDInitiale');
+        const filter = input.value.toUpperCase();
+        const table = document.querySelector("#cmdInitialeData table");
+        
+        if (!table) return;
+        
+        const rows = table.getElementsByTagName('tr');
+        
+        let found = 0;
+        for (let i = 1; i < rows.length; i++) { // Commencer à 1 pour sauter l'en-tête
+          let found_in_row = false;
+          const cells = rows[i].getElementsByTagName('td');
+          
+          for (let j = 0; j < cells.length; j++) {
+            const cell = cells[j];
+            if (cell) {
+              const txtValue = cell.textContent || cell.innerText;
+              if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                found_in_row = true;
+                found++;
+                break;
+              }
+            }
+          }
+          
+          if (found_in_row) {
+            rows[i].style.display = '';
+          } else {
+            rows[i].style.display = 'none';
+          }
+        }
+        
+        // Mettre à jour le compteur
+        const countDisplay = document.getElementById('cmdInitialeData').querySelector('p.text-info');
+        if (countDisplay && filter) {
+          const totalCount = rows.length - 1; // Soustraire l'en-tête
+          countDisplay.textContent = `Affichage de ${found} commandes sur un total de ${totalCount}.`;
+        } else if (countDisplay && !filter) {
+          // Restaurer le message d'origine
+          const totalCount = rows.length - 1; // Soustraire l'en-tête
+          countDisplay.textContent = `Total : ${totalCount} commandes.`;
+        }
+      }
+      
+      // Fonction pour effacer le filtre
+      function clearFilter() {
+        document.getElementById('searchCMDInitiale').value = '';
+        filterCMDInitiale();
+      }
+      
+      // Fonction pour démarrer le processus automatique
+      function demarrerProcessusAutomatique() {
+        // Confirmation avant traitement
+        if (!confirm('Cette opération va traiter automatiquement les données et les insérer dans CMD initiale. Continuer ?')) {
+          return;
+        }
+        
+        // Réinitialiser l'affichage
+        document.getElementById('resultatsDetailles').style.display = 'none';
+        document.getElementById('resultProcessus').style.display = 'none';
+        document.getElementById('loadingProcessus').style.display = 'block';
+        document.getElementById('cmdInitialeData').innerHTML = '';
+        document.getElementById('etapeActuelle').innerHTML = '<strong>Démarrage du processus automatique...</strong>';
+        
+        // Réinitialiser les résultats des étapes
+        etapesResultats = {
+          1: null,
+          2: null,
+          3: null,
+          4: null
+        };
+        
+        // Réinitialiser et initialiser les étapes
+        updateStepStatus('step1', 'waiting');
+        updateStepStatus('step2', 'waiting');
+        updateStepStatus('step3', 'waiting');
+        updateStepStatus('step4', 'waiting');
+        
+        // Activer la première étape
+        updateStepStatus('step1', 'active');
+        
+        // Démarrer le processus avec un délai pour permettre l'animation des étapes
+        setTimeout(function() {
+          // Appeler la fonction du serveur
+          google.script.run
+            .withSuccessHandler(afficherResultatAutomatique)
+            .withFailureHandler(afficherErreurAutomatique)
+            .processusAutomatique();
+        }, 500);
+      }
+      
+      // Fonction pour afficher le résultat du processus automatique
+      function afficherResultatAutomatique(resultat) {
+        // Masquer le chargement
+        document.getElementById('loadingProcessus').style.display = 'none';
+        
+        var result = document.getElementById('resultProcessus');
+        
+        if (resultat.success) {
+          // Mettre à jour les étapes
+          updateStepStatus('step1', 'completed');
+          updateStepStatus('step2', 'completed');
+          updateStepStatus('step3', 'completed');
+          updateStepStatus('step4', 'completed');
+          
+          // Afficher le message de succès
+          result.className = 'result success alert alert-success';
+          result.innerHTML = '<strong>Succès :</strong> Le processus automatique a été complété avec succès.';
+          result.style.display = 'block';
+          
+          // Afficher les résultats détaillés
+          document.getElementById('rapportFusion').textContent = resultat.rapportFusion;
+          document.getElementById('nbCommandesTraitees').textContent = resultat.commandesTraitees;
+          document.getElementById('nbProblemes').textContent = resultat.problemes;
+          document.getElementById('contenuApercu').innerHTML = resultat.apercu;
+          
+          // Afficher les données de CMD Initiale si disponibles
+          if (resultat.cmdInitiale && resultat.cmdInitiale.success) {
+            // Mettre à jour les compteurs
+            document.getElementById('cmdNonAffectees').textContent = resultat.cmdInitiale.statuts.nonAffectees;
+            document.getElementById('cmdAffectees').textContent = resultat.cmdInitiale.statuts.affectees;
+            document.getElementById('cmdProblemes').textContent = resultat.cmdInitiale.statuts.problemes;
+            
+            // Afficher le tableau CMD Initiale
+            document.getElementById('cmdInitialeData').innerHTML = resultat.cmdInitiale.htmlApercu;
+            
+            // Si l'option de forçage des doublons est activée, appliquer manuellement la coloration
+            if (document.getElementById('forceDoublonsCheck').checked) {
+              colorerDoublons();
+            }
+          } else {
+            document.getElementById('cmdInitialeData').innerHTML = 
+              "<div class='alert alert-warning'>Impossible d'afficher les données de CMD Initiale.</div>";
+          }
+          
+          document.getElementById('resultatsDetailles').style.display = 'block';
+        } else {
+          // Déterminer l'étape qui a échoué et mettre à jour les états
+          if (resultat.etape === 1 || resultat.message.toLowerCase().includes('récupération des feuilles')) {
+            updateStepStatus('step1', 'error');
+            updateStepStatus('step2', 'waiting');
+            updateStepStatus('step3', 'waiting');
+            updateStepStatus('step4', 'waiting');
+          } else if (resultat.etape === 2 || resultat.message.toLowerCase().includes('fusion des feuilles')) {
+            updateStepStatus('step1', 'completed');
+            updateStepStatus('step2', 'error');
+            updateStepStatus('step3', 'waiting');
+            updateStepStatus('step4', 'waiting');
+          } else if (resultat.etape === 3 || resultat.message.toLowerCase().includes('génération de l\'aperçu') || resultat.message.toLowerCase().includes('importation de la feuille')) {
+            updateStepStatus('step1', 'completed');
+            updateStepStatus('step2', 'completed');
+            updateStepStatus('step3', 'error');
+            updateStepStatus('step4', 'waiting');
+          } else if (resultat.etape === 4 || resultat.message.toLowerCase().includes('traitement des données')) {
+            updateStepStatus('step1', 'completed');
+            updateStepStatus('step2', 'completed');
+            updateStepStatus('step3', 'completed');
+            updateStepStatus('step4', 'error');
+          }
+          
+          // Afficher le message d'erreur
+          result.className = 'result error alert alert-danger';
+          result.innerHTML = '<strong>Erreur :</strong> ' + resultat.message;
+          result.style.display = 'block';
+        }
+      }
+      
+      // Fonction pour afficher une erreur lors du processus automatique
+      function afficherErreurAutomatique(erreur) {
+        // Masquer le chargement
+        document.getElementById('loadingProcessus').style.display = 'none';
+        
+        // Marquer toutes les étapes comme erreur
+        updateStepStatus('step1', 'error');
+        updateStepStatus('step2', 'error');
+        updateStepStatus('step3', 'error');
+        updateStepStatus('step4', 'error');
+        
+        // Afficher l'erreur
+        var result = document.getElementById('resultProcessus');
+        result.className = 'result error alert alert-danger';
+        result.innerHTML = '<strong>Erreur système :</strong> ' + erreur;
+        result.style.display = 'block';
       }
     </script>
   </body>

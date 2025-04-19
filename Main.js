@@ -8,6 +8,7 @@
 
 // Configuration globale
 const CONFIG = {
+  URL_EXTERNE: "https://docs.google.com/spreadsheets/d/1OK2Ndvc9dyUV99sJDLJ3tYSvtECijG-CM0QlGClYduU/edit",
   SHEETS: {
     CONFIG: 'CMD config',
     INITIALE: 'CMD initiale',
