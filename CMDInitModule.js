@@ -181,33 +181,25 @@ function importerDonnees(nomFeuille, feuilleDestination) {
  */
 function getListeFeuilles() {
   try {
-    console.log("Récupération de la liste des feuilles disponibles...");
+    // URL du fichier Google Sheet externe
+    const url = CONFIG.URL_EXTERNE || "https://docs.google.com/spreadsheets/d/1OK2Ndvc9dyUV99sJDLJ3tYSvtECijG-CM0QlGClYduU/edit";
     
-    // Récupérer le fichier externe
-    const fichierExterne = SpreadsheetApp.openByUrl(CONFIG.URL_EXTERNE);
-    if (!fichierExterne) {
-      return { 
-        success: false, 
-        message: "Impossible d'accéder au fichier externe" 
-      };
-    }
+    // Ouvrir le fichier externe en utilisant son URL
+    const fichierExterne = SpreadsheetApp.openByUrl(url);
     
-    // Récupérer toutes les feuilles
+    // Récupérer les noms de toutes les feuilles
     const feuilles = fichierExterne.getSheets();
     const nomsFeuilles = feuilles.map(feuille => feuille.getName());
     
-    console.log(`Feuilles trouvées : ${nomsFeuilles.join(', ')}`);
-    
     return {
       success: true,
-      message: `${nomsFeuilles.length} feuilles trouvées`,
       nomsFeuilles: nomsFeuilles
     };
   } catch (error) {
-    console.error("Erreur lors de la récupération des feuilles :", error);
+    logError(error, 'getListeFeuilles');
     return {
       success: false,
-      message: "Erreur lors de la récupération des feuilles : " + error.toString()
+      message: error.toString()
     };
   }
 }
@@ -221,77 +213,58 @@ function getListeFeuilles() {
  */
 function getApercuHTML(nomFeuille) {
   try {
-    console.log(`Génération de l'aperçu HTML pour la feuille ${nomFeuille}...`);
+    // URL du fichier Google Sheet externe
+    const url = CONFIG.URL_EXTERNE || "https://docs.google.com/spreadsheets/d/1OK2Ndvc9dyUV99sJDLJ3tYSvtECijG-CM0QlGClYduU/edit";
     
-    // Récupérer le fichier externe
-    const fichierExterne = SpreadsheetApp.openByUrl(CONFIG.URL_EXTERNE);
-    if (!fichierExterne) {
-      return "Erreur : Impossible d'accéder au fichier externe";
-    }
+    // Ouvrir le fichier externe en utilisant son URL
+    const fichierExterne = SpreadsheetApp.openByUrl(url);
     
     // Récupérer la feuille spécifiée
     const feuille = fichierExterne.getSheetByName(nomFeuille);
+    
     if (!feuille) {
-      return `Erreur : Feuille ${nomFeuille} introuvable`;
+      return "<p style='color: red;'>La feuille \"" + nomFeuille + "\" n'existe pas dans le fichier.</p>";
     }
     
-    // Récupérer les données de la feuille
-    const donneesRange = feuille.getDataRange();
-    const donnees = donneesRange.getValues();
+    // Récupérer les données (limité à 10 lignes pour l'aperçu)
+    const plage = feuille.getRange(1, 1, Math.min(11, feuille.getLastRow()), feuille.getLastColumn());
+    const donnees = plage.getValues();
     
-    if (donnees.length <= 1) {
-      return "Erreur : La feuille ne contient pas assez de données";
+    if (donnees.length === 0) {
+      return "<p style='color: red;'>Aucune donnée n'a été trouvée dans la feuille \"" + nomFeuille + "\".</p>";
     }
     
-    // Générer le tableau HTML
-    let html = `
-      <div class="card mb-3">
-        <div class="card-header bg-info text-white">Aperçu des données (${donnees.length - 1} lignes)</div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-striped table-bordered">
-              <thead class="thead-dark">
-                <tr>`;
+    // Créer le tableau HTML
+    let html = "<table style='width:100%; border-collapse:collapse; margin-top:10px;'>";
     
-    // En-têtes
-    const headers = donnees[0];
-    headers.forEach(header => {
-      html += `<th>${header}</th>`;
-    });
-    
-    html += `
-                </tr>
-              </thead>
-              <tbody>`;
-    
-    // Lignes de données (limiter à 10 pour l'aperçu)
-    const maxRows = Math.min(donnees.length, 11); // En-tête + 10 lignes de données
-    for (let i = 1; i < maxRows; i++) {
-      html += '<tr>';
-      donnees[i].forEach(cell => {
-        html += `<td>${cell}</td>`;
-      });
-      html += '</tr>';
+    // En-tête (première ligne)
+    html += "<thead><tr>";
+    for (let i = 0; i < donnees[0].length; i++) {
+      html += "<th style='border:1px solid #ddd; padding:8px; text-align:left; background-color:#f2f2f2;'>" + 
+              (donnees[0][i] !== null ? donnees[0][i].toString() : "") + "</th>";
     }
+    html += "</tr></thead>";
     
-    html += `
-              </tbody>
-            </table>
-          </div>`;
-    
-    // Ajouter un message si toutes les lignes ne sont pas affichées
-    if (donnees.length > 11) {
-      html += `<p class="text-info">Note : Seules les 10 premières lignes sont affichées sur un total de ${donnees.length - 1}.</p>`;
+    // Corps du tableau (autres lignes)
+    html += "<tbody>";
+    for (let i = 1; i < donnees.length; i++) {
+      html += "<tr>";
+      for (let j = 0; j < donnees[i].length; j++) {
+        html += "<td style='border:1px solid #ddd; padding:8px; text-align:left;'>" + 
+                (donnees[i][j] !== null ? donnees[i][j].toString() : "") + "</td>";
+      }
+      html += "</tr>";
     }
+    html += "</tbody></table>";
     
-    html += `
-        </div>
-      </div>`;
+    // Ajouter un message de succès
+    const infoMessage = "<p style='color: green;'>Aperçu de la feuille \"" + nomFeuille + 
+                       "\" (" + (donnees.length-1) + " lignes sur " + (feuille.getLastRow()-1) + " au total)</p>";
     
-    return html;
+    return infoMessage + html;
   } catch (error) {
-    console.error("Erreur lors de la génération de l'aperçu HTML :", error);
-    return "Erreur : " + error.toString();
+    console.error("Erreur dans getApercuHTML:", error);
+    return "<p style='color: red;'>Erreur lors de la récupération des données: " + error.toString() + "</p>";
   }
 }
 
@@ -888,169 +861,165 @@ function fusionnerFeuillesExterne() {
  */
 function getCMDInitialeData() {
   try {
-    console.log("Récupération des données de CMD Initiale...");
-    
-    // Récupérer le fichier actuel
+    // Récupérer le classeur actif
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const cmdInitialeSheet = ss.getSheetByName("CMD initiale");
     
-    if (!cmdInitialeSheet) {
+    // Récupérer la feuille CMD Initiale
+    const feuilleInitiale = ss.getSheetByName(CONFIG.SHEETS.INITIALE);
+    if (!feuilleInitiale) {
       return {
         success: false,
-        message: "Feuille CMD initiale introuvable"
+        message: "La feuille CMD Initiale n'existe pas."
       };
     }
     
     // Récupérer les données
-    const donnees = cmdInitialeSheet.getDataRange().getValues();
-    
+    const donnees = feuilleInitiale.getDataRange().getValues();
     if (donnees.length <= 1) {
       return {
         success: false,
-        message: "Aucune donnée dans CMD initiale"
+        message: "La feuille CMD Initiale est vide ou ne contient que des en-têtes."
       };
     }
     
-    // Générer l'HTML pour afficher les données
-    const htmlApercu = generateCMDInitialeHTML(donnees);
+    // Récupérer les en-têtes
+    const enTetes = donnees[0];
     
-    // Compter les différents statuts
-    let nonAffectees = 0;
-    let affectees = 0;
-    let problemes = 0;
+    // Préparer les données formatées
+    const commandesData = [];
+    const statuts = {
+      nonAffectees: 0,
+      affectees: 0,
+      problemes: 0
+    };
     
-    // L'index de la colonne Statut (supposons qu'il est à l'index 8)
-    const statutIndex = 8;
-    
+    // Parcourir les données (en sautant les en-têtes)
     for (let i = 1; i < donnees.length; i++) {
-      const statut = donnees[i][statutIndex];
+      const ligne = donnees[i];
       
-      if (!statut || statut === "Non affectée") {
-        nonAffectees++;
-      } else if (statut === "Problème") {
-        problemes++;
-      } else {
-        affectees++;
+      // Créer un objet pour chaque commande avec les colonnes nommées
+      const commande = {};
+      for (let j = 0; j < enTetes.length; j++) {
+        commande[enTetes[j]] = ligne[j];
       }
+      
+      // Compter par statut
+      if (commande["Statut"] === CONFIG.STATUTS.NON_AFFECTEE) {
+        statuts.nonAffectees++;
+      } else if (commande["Statut"] === CONFIG.STATUTS.AFFECTEE) {
+        statuts.affectees++;
+      } else if (commande["Statut"] === CONFIG.STATUTS.PROBLEME) {
+        statuts.problemes++;
+      }
+      
+      // Ajouter la commande au tableau
+      commandesData.push(commande);
     }
+    
+    // Formatage HTML pour l'aperçu
+    let html = generateCMDInitialeHTML(commandesData, enTetes);
     
     return {
       success: true,
-      htmlApercu: htmlApercu,
-      statuts: {
-        nonAffectees: nonAffectees,
-        affectees: affectees,
-        problemes: problemes
-      }
+      message: "Données CMD Initiale récupérées avec succès.",
+      donnees: commandesData,
+      enTetes: enTetes,
+      statuts: statuts,
+      htmlApercu: html,
+      totalCommandes: donnees.length - 1 // Moins les en-têtes
     };
   } catch (error) {
-    console.error("Erreur lors de la récupération des données de CMD Initiale :", error);
+    logError(error, 'getCMDInitialeData');
     return {
       success: false,
-      message: "Erreur : " + error.toString()
+      message: "Erreur lors de la récupération des données CMD Initiale: " + error.toString()
     };
   }
 }
 
 /**
- * Génère un tableau HTML pour afficher les données CMD Initiale
- * @param {Array} donnees - Données de la feuille CMD Initiale
- * @return {string} - Code HTML pour afficher le tableau
+ * Génère le HTML pour l'aperçu de CMD Initiale
+ * 
+ * @param {Array} commandes - Tableau des commandes
+ * @param {Array} enTetes - Tableau des en-têtes
+ * @return {string} HTML formaté
  */
-function generateCMDInitialeHTML(donnees) {
+function generateCMDInitialeHTML(commandes, enTetes) {
   try {
-    // Extraire les en-têtes (première ligne)
-    const enTetes = donnees[0];
+    if (commandes.length === 0) {
+      return "<p class='alert alert-warning'>Aucune commande disponible.</p>";
+    }
     
-    // Trouver l'index des colonnes importantes pour la coloration
-    const refCmdIndex = enTetes.indexOf("Référence CMD");
-    const numCommandeIndex = enTetes.indexOf("Numéro de commande");
-    const statutIndex = enTetes.indexOf("Statut");
+    // Créer le tableau HTML
+    let html = "<div class='table-responsive'><table class='table table-striped table-bordered table-sm'>";
     
-    // Générer le tableau HTML
-    let html = `
-      <div class="table-responsive">
-        <table id="cmdInitialeTable" class="table table-striped table-bordered">
-          <thead class="thead-dark">
-            <tr>`;
+    // En-tête du tableau
+    html += "<thead class='thead-dark'><tr>";
     
-    // Ajouter les en-têtes
-    enTetes.forEach(header => {
-      html += `<th>${header}</th>`;
+    // Colonnes principales à afficher (pas toutes pour éviter de surcharger)
+    const colonnesAffichees = ["N° Commande", "Source", "Date", "Nom", "Prénom", "Téléphone", "Ville", "Produits", "Statut", "Remarque"];
+    
+    colonnesAffichees.forEach(colonne => {
+      if (enTetes.includes(colonne)) {
+        html += `<th>${colonne}</th>`;
+      }
     });
     
-    html += `
-            </tr>
-          </thead>
-          <tbody>`;
+    html += "</tr></thead><tbody>";
     
-    // Map pour suivre les références de commande en double
-    const refCmdMap = new Map();
-    const numCommandeMap = new Map();
-    
-    // D'abord, compter les occurrences
-    for (let i = 1; i < donnees.length; i++) {
-      const refCmd = donnees[i][refCmdIndex];
-      if (refCmd) {
-        refCmdMap.set(refCmd, (refCmdMap.get(refCmd) || 0) + 1);
+    // Afficher toutes les commandes sans limitation
+    for (let i = 0; i < commandes.length; i++) {
+      const commande = commandes[i];
+      
+      // Déterminer la classe CSS en fonction du statut et si c'est un doublon
+      let rowClass = "";
+      if (commande["Remarque"] === "Doublon") {
+        rowClass = "table-danger"; // Rouge pour les doublons
+      } else if (commande["Statut"] === CONFIG.STATUTS.NON_AFFECTEE) {
+        rowClass = "table-warning";
+      } else if (commande["Statut"] === CONFIG.STATUTS.AFFECTEE) {
+        rowClass = "table-success";
+      } else if (commande["Statut"] === CONFIG.STATUTS.PROBLEME) {
+        rowClass = "table-danger";
       }
       
-      const numCommande = donnees[i][numCommandeIndex];
-      if (numCommande) {
-        numCommandeMap.set(numCommande, (numCommandeMap.get(numCommande) || 0) + 1);
-      }
-    }
-    
-    // Ajouter les lignes de données
-    for (let i = 1; i < donnees.length; i++) {
-      const ligne = donnees[i];
-      const statut = ligne[statutIndex];
+      html += `<tr class="${rowClass}">`;
       
-      // Déterminer la classe CSS pour la ligne en fonction du statut
-      let trClass = "";
-      if (statut === "Problème") {
-        trClass = "table-danger";
-      } else if (statut === "Affectée") {
-        trClass = "table-success";
-      } else {
-        trClass = "table-warning";
-      }
-      
-      // Vérifier si la référence CMD est en double
-      const refCmd = ligne[refCmdIndex];
-      const numCommande = ligne[numCommandeIndex];
-      
-      // Ajouter un attribut data-duplicates pour le filtrage
-      const hasDuplicates = (refCmd && refCmdMap.get(refCmd) > 1) || 
-                          (numCommande && numCommandeMap.get(numCommande) > 1);
-      
-      html += `<tr class="${trClass}" data-duplicates="${hasDuplicates}">`;
-      
-      // Ajouter chaque cellule
-      for (let j = 0; j < ligne.length; j++) {
-        const cellValue = ligne[j] !== null ? ligne[j].toString() : "";
-        
-        // Colorer en rouge les références CMD et numéros de commande en double
-        if ((j === refCmdIndex && refCmd && refCmdMap.get(refCmd) > 1) ||
-            (j === numCommandeIndex && numCommande && numCommandeMap.get(numCommande) > 1)) {
-          html += `<td class="text-danger font-weight-bold">${cellValue}</td>`;
-        } else {
-          html += `<td>${cellValue}</td>`;
+      colonnesAffichees.forEach(colonne => {
+        if (enTetes.includes(colonne)) {
+          let valeur = commande[colonne] || "";
+          // Formater les valeurs si nécessaire
+          if (colonne === "Date" && valeur) {
+            // Date déjà formatée dans le traitement
+          } else if (colonne === "Téléphone" && valeur) {
+            // Téléphone déjà formaté dans le traitement
+          }
+          html += `<td>${valeur}</td>`;
         }
-      }
+      });
       
-      html += `</tr>`;
+      html += "</tr>";
     }
     
-    html += `
-          </tbody>
-        </table>
-      </div>`;
+    html += "</tbody></table></div>";
+    
+    // Compter les doublons
+    const doublons = commandes.filter(cmd => cmd["Remarque"] === "Doublon").length;
+    
+    // Ajouter une indication du nombre total de commandes et de doublons
+    html += `<div class="row mt-3">
+              <div class="col-md-6">
+                <p class="text-info">Total : ${commandes.length} commandes.</p>
+              </div>
+              <div class="col-md-6">
+                <p class="text-danger">Dont ${doublons} doublons identifiés.</p>
+              </div>
+            </div>`;
     
     return html;
   } catch (error) {
-    console.error("Erreur lors de la génération du HTML pour CMD Initiale:", error);
-    return "Erreur : " + error.toString();
+    logError(error, 'generateCMDInitialeHTML');
+    return "<p class='alert alert-danger'>Erreur lors de la génération de l'aperçu: " + error.toString() + "</p>";
   }
 }
 
